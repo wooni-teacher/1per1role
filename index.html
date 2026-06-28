@@ -42,32 +42,6 @@
   .dot-connecting { background:#ff9800; animation:pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  .firebase-help {
-    margin-top: 14px; text-align: left; background:#f8fafc; border:1px solid #e2e8f0;
-    border-radius: 12px; padding: 12px;
-  }
-  .firebase-help h3 { font-size: .95rem; color:#334155; margin-bottom:8px; }
-  .firebase-help p { margin: 6px 0; color:#475569; font-size:.85rem; line-height:1.45; }
-  .firebase-help code {
-    background:#eef2ff; color:#4338ca; padding:2px 6px; border-radius:6px; font-size:.82rem;
-    word-break:break-all;
-  }
-  .diag-box {
-    display:none; margin-top:12px; text-align:left; background:#fff7ed; border:1px solid #fdba74;
-    color:#9a3412; border-radius:12px; padding:12px;
-  }
-  .diag-box.show { display:block; }
-  .diag-title { font-weight:700; margin-bottom:6px; font-size:.9rem; }
-  .diag-box ul { margin:8px 0 0 18px; }
-  .diag-box li { margin:4px 0; font-size:.84rem; line-height:1.45; }
-  .diag-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .diag-btn {
-    border:none; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:.84rem;
-    background:#ea580c; color:white;
-  }
-  .diag-btn.secondary { background:#64748b; }
-
-
   /* ── 공통 화면 ── */
   .screen { display:none; }
   .screen.active { display:block; }
@@ -464,6 +438,35 @@
     .rps-btn { width:64px; height:64px; font-size:2rem; }
     .music-player { min-width:200px; }
   }
+
+  /* ── 운영 단계/경쟁 UI ── */
+  .phase-banner{
+    margin:18px 0 0; padding:16px 18px; border-radius:16px;
+    background:linear-gradient(135deg,#fff7e6,#fff1cc); border:1px solid #ffe0a3;
+  }
+  .phase-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .phase-pill{display:inline-block;padding:6px 12px;border-radius:999px;font-size:.8rem;font-weight:700;background:#fff;color:#8a5a00;border:1px solid #ffd27a;}
+  .phase-timer{font-size:1.05rem;font-weight:800;color:#d35400;}
+  .phase-help{margin-top:8px;font-size:.88rem;color:#7a6a52;line-height:1.5;}
+  .competition-card{
+    margin-top:16px; background:#f8fbff; border:1px solid #dcecff; border-radius:16px; padding:16px;
+  }
+  .competition-card h3{margin:0 0 8px 0; color:#245; font-size:1rem;}
+  .competition-participants{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px;}
+  .competition-chip{padding:6px 10px;border-radius:999px;background:#eef6ff;font-size:.82rem;color:#356;}
+  .hand-grid{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 8px;}
+  .hand-btn{
+    border:none; border-radius:14px; padding:12px 16px; cursor:pointer; font-size:1rem; font-weight:700;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:white;
+  }
+  .hand-btn.selected{outline:3px solid #cfd8ff;}
+  .mini-note{font-size:.8rem;color:#6c7a89;}
+  .admin-session-box{
+    margin-bottom:16px; padding:16px; border-radius:16px; background:#f8faff; border:1px solid #dce7ff;
+  }
+  .admin-session-box .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  .admin-session-box .meta{display:flex;gap:12px;flex-wrap:wrap;font-size:.86rem;color:#556;}
+
 </style>
 </head>
 <body>
@@ -563,23 +566,6 @@
       <span id="statusText">Firebase 연결 중...</span>
     </div>
 
-    <div class="firebase-help">
-      <h3>Firebase 연결 안내</h3>
-      <p>GitHub 코드 화면이 아니라 <b>GitHub Pages 주소</b>에서 실행해야 합니다.</p>
-      <p>에러가 <code>Permission denied</code> 이면 Realtime Database 규칙을 먼저 확인하세요.</p>
-    </div>
-
-    <div class="diag-box" id="diagBox">
-      <div class="diag-title" id="diagTitle">연결 진단</div>
-      <p id="diagMessage">진단 메시지가 여기에 표시됩니다.</p>
-      <ul id="diagList"></ul>
-      <div class="diag-actions">
-        <button class="diag-btn" onclick="window.retryFirebaseConnection && window.retryFirebaseConnection()">다시 연결</button>
-        <button class="diag-btn secondary" onclick="window.showFirebaseRulesHelp && window.showFirebaseRulesHelp()">규칙 안내 보기</button>
-      </div>
-    </div>
-
-
     <button class="login-btn btn-student" id="btnStudent" onclick="goTo('student')" disabled>🎒 학생 화면</button>
     <button class="login-btn btn-admin"   id="btnAdmin"   onclick="goTo('admin')"   disabled>👩‍🏫 관리자 대시보드</button>
   </div>
@@ -616,6 +602,9 @@
         <div id="progressBar" style="height:100%;background:linear-gradient(135deg,#4facfe,#00f2fe);border-radius:10px;transition:width .5s;width:0%"></div>
       </div>
     </div>
+
+    <div id="studentPhaseArea"></div>
+    <div id="studentCompetitionArea"></div>
 
     <div class="card" id="studentSelectCard">
       <h2>👤 내 이름을 선택하세요</h2>
@@ -659,6 +648,7 @@
 
     <div class="tab-content active" id="tab-overview">
       <div class="card">
+        <div class="admin-session-box" id="adminSessionBox"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
           <h2 style="margin:0;border:none;padding:0;">역할별 신청 현황</h2>
           <div>
@@ -1068,15 +1058,15 @@ let db, unsubscribe = null, rtLogs = [], rtPanelOpen = false;
 let state = {}, currentStudent = null, currentMonth = 6;
 let adminCurrentMonth = 6, manageCurrentMonth = 6, selectedMonthForTable = 6;
 let editState = {}, rpsState = {};
+let sessionState = {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0};
+let competitionsState = {};
+let phaseTicker = null;
 
 /* ─── Firebase 초기화 ─── */
 async function initFirebase() {
   try {
-    setStatus('connecting', 'Firebase 연결 중...');
-    hideDiagnostic();
     const app = initializeApp(firebaseConfig);
     db = getDatabase(app);
-
     const snap = await get(ref(db, 'oneRole'));
     if (!snap.exists()) {
       const init = {};
@@ -1086,98 +1076,23 @@ async function initFirebase() {
       });
       await set(ref(db, 'oneRole'), init);
     }
-
+    const sessionSnap = await get(ref(db,'session'));
+    if (!sessionSnap.exists()) await set(ref(db,'session'), {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0});
+    const compSnap = await get(ref(db,'competitions'));
+    if (!compSnap.exists()) await set(ref(db,'competitions'), {});
     initLocalState();
     startListeners();
+    startPhaseTicker();
     setStatus('connected', '연결됨 ✅');
     document.getElementById('btnStudent').disabled = false;
     document.getElementById('btnAdmin').disabled   = false;
     hideLoading();
-    showToast('Firebase 연결 성공');
   } catch(e) {
-    handleFirebaseInitError(e);
+    setStatus('disconnected', '연결 실패 ❌');
+    hideLoading();
+    showToast('Firebase 연결 실패: ' + e.message);
   }
 }
-
-function handleFirebaseInitError(e) {
-  console.error('Firebase init error:', e);
-  setStatus('disconnected', '연결 실패 ❌');
-  hideLoading();
-  document.getElementById('btnStudent').disabled = true;
-  document.getElementById('btnAdmin').disabled   = true;
-
-  const msg = (e && e.message) ? e.message : String(e);
-  let title = 'Firebase 연결 실패';
-  let body  = `오류 메시지: ${msg}`;
-  let steps = [
-    'GitHub 코드 화면이 아니라 GitHub Pages 주소에서 열었는지 확인하세요.',
-    'Firebase 콘솔에서 Realtime Database를 만들었는지 확인하세요.',
-    'databaseURL 값이 현재 프로젝트와 일치하는지 확인하세요.'
-  ];
-
-  if (/permission denied/i.test(msg)) {
-    title = 'Realtime Database 권한 거부';
-    body  = '현재 앱이 oneRole 경로를 읽거나 쓰지 못하고 있습니다. Realtime Database Rules를 먼저 열어야 합니다.';
-    steps = [
-      'Firebase 콘솔 → Realtime Database → Rules 로 이동하세요.',
-      '테스트용으로 아래 규칙을 게시(Publish)하세요.',
-      '{ "rules": { ".read": true, ".write": true } }',
-      '중요: Firestore 규칙이 아니라 Realtime Database 규칙입니다.',
-      '규칙 게시 후 GitHub Pages 페이지를 새로고침하세요.'
-    ];
-  } else if (/network|failed to fetch|offline/i.test(msg)) {
-    title = '네트워크 또는 CDN 로드 문제';
-    body  = 'Firebase 스크립트를 불러오지 못했을 가능성이 있습니다.';
-    steps = [
-      '인터넷 연결 상태를 확인하세요.',
-      '학교망/보안 프로그램이 gstatic 로딩을 막는지 확인하세요.',
-      '브라우저 확장 프로그램을 잠시 꺼 보고 다시 시도하세요.'
-    ];
-  }
-
-  showDiagnostic(title, body, steps);
-  showToast(title + ': ' + msg);
-}
-
-function showDiagnostic(title, message, items=[]) {
-  const box = document.getElementById('diagBox');
-  const titleEl = document.getElementById('diagTitle');
-  const msgEl = document.getElementById('diagMessage');
-  const listEl = document.getElementById('diagList');
-  if (!box || !titleEl || !msgEl || !listEl) return;
-
-  titleEl.textContent = title;
-  msgEl.textContent = message;
-  listEl.innerHTML = '';
-  items.forEach(item => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    listEl.appendChild(li);
-  });
-  box.classList.add('show');
-}
-
-function hideDiagnostic() {
-  const box = document.getElementById('diagBox');
-  if (box) box.classList.remove('show');
-}
-
-window.retryFirebaseConnection = function() {
-  showLoading('Firebase 다시 연결 중...');
-  initFirebase();
-};
-
-window.showFirebaseRulesHelp = function() {
-  showDiagnostic(
-    '테스트용 Realtime Database Rules',
-    '아래 규칙을 Firebase 콘솔의 Realtime Database → Rules 에 넣고 Publish 하세요.',
-    [
-      '{ "rules": { ".read": true, ".write": true } }',
-      '이 규칙은 테스트용이므로 실제 운영 전에는 더 안전하게 바꿔야 합니다.',
-      '현재 프로젝트가 per1roll 인지도 함께 확인하세요.'
-    ]
-  );
-};
 
 function initLocalState() {
   MONTHS.forEach(m => {
@@ -1203,6 +1118,14 @@ function startListeners() {
     });
     onDataUpdated();
   });
+  onValue(ref(db,'session'), snap => {
+    sessionState = snap.val() || {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0};
+    onDataUpdated();
+  });
+  onValue(ref(db,'competitions'), snap => {
+    competitionsState = snap.val() || {};
+    onDataUpdated();
+  });
   onValue(ref(db, 'logs'), snap => {
     const data = snap.val() || {};
     rtLogs = Object.values(data).sort((a,b)=>b.ts-a.ts).slice(0,40);
@@ -1213,6 +1136,8 @@ function startListeners() {
 function onDataUpdated() {
   const sOn = document.getElementById('studentScreen').classList.contains('active');
   const aOn = document.getElementById('adminScreen').classList.contains('active');
+  renderStudentPhaseArea();
+  renderStudentCompetitionArea();
   if (sOn) {
     updateProgress();
     if (currentStudent) {
@@ -1223,6 +1148,7 @@ function onDataUpdated() {
   }
   if (aOn) {
     renderStats();
+    renderAdminSessionBox();
     const active = document.querySelector('.tab-content.active');
     if (active) {
       const id = active.id.replace('tab-','');
@@ -1264,6 +1190,286 @@ async function addLog(msg) {
   try { await push(ref(db,'logs'),{msg,ts:Date.now()}); } catch(_){}
 }
 const roleName = id => ROLES.find(r=>r.id===id)?.name ?? id;
+
+const HAND_LABELS = {'rock':'✊ 바위','scissors':'✌️ 가위','paper':'🖐️ 보'};
+const handEmoji = h => ({rock:'✊',scissors:'✌️',paper:'🖐️'}[h] || '❔');
+const activeCompetitionsForMonth = m => competitionsState?.[m] || {};
+const getCompetition = (m,rid) => activeCompetitionsForMonth(m)?.[rid] || null;
+const getRemainingMs = ts => Math.max(0, (ts||0) - Date.now());
+function formatRemain(ms) {
+  const total = Math.ceil(ms/1000);
+  const m = Math.floor(total/60);
+  const s = Math.max(0,total%60);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function getSessionMonth(){ return parseInt(sessionState?.month || currentMonth || 6); }
+function getRoleById(roleId){ return ROLES.find(r=>r.id===roleId); }
+
+
+function startPhaseTicker() {
+  if (phaseTicker) clearInterval(phaseTicker);
+  phaseTicker = setInterval(async () => {
+    renderStudentPhaseArea();
+    renderStudentCompetitionArea();
+    renderAdminSessionBox();
+    try {
+      if (sessionState.mode === 'selection' && sessionState.selectionEndsAt && Date.now() >= sessionState.selectionEndsAt) {
+        await finalizeSelection(sessionState.month, true);
+      } else if (sessionState.mode === 'rps' && sessionState.rpsEndsAt && Date.now() >= sessionState.rpsEndsAt) {
+        await finalizeAllCompetitions(sessionState.month, true);
+      }
+    } catch(e) {}
+  }, 1000);
+}
+
+async function setSession(data) {
+  await set(ref(db,'session'), data);
+}
+
+function renderStudentPhaseArea() {
+  const area = document.getElementById('studentPhaseArea');
+  if (!area) return;
+  const month = currentMonth;
+  let title='대기 중';
+  let timer='';
+  let help='관리자가 역할 선택을 시작하면 학생들이 같은 달 역할을 1분 동안 신청할 수 있습니다.';
+  if (sessionState.mode === 'selection' && parseInt(sessionState.month) === month) {
+    title = `${ML[month]} 역할 선택 진행 중`;
+    timer = formatRemain(getRemainingMs(sessionState.selectionEndsAt));
+    help = '지금은 역할 신청 시간입니다. 한 학생당 한 역할만 신청할 수 있어요.';
+  } else if (sessionState.mode === 'rps' && parseInt(sessionState.month) === month) {
+    title = `${ML[month]} 가위바위보 진행 중`;
+    timer = formatRemain(getRemainingMs(sessionState.rpsEndsAt));
+    help = '정원보다 많이 신청한 역할만 경쟁합니다. 해당 학생들은 아래에서 동시에 제출하세요.';
+  } else if (sessionState.mode === 'done' && parseInt(sessionState.month) === month) {
+    title = `${ML[month]} 배정 완료`;
+    help = '이번 달 배정이 완료되었습니다.';
+  }
+  area.innerHTML = `<div class="phase-banner">
+    <div class="phase-row">
+      <div><span class="phase-pill">${title}</span></div>
+      ${timer?`<div class="phase-timer">남은 시간 ${timer}</div>`:''}
+    </div>
+    <div class="phase-help">${help}</div>
+  </div>`;
+}
+
+function renderStudentCompetitionArea() {
+  const area = document.getElementById('studentCompetitionArea');
+  if (!area) return;
+  if (!currentStudent || sessionState.mode !== 'rps' || parseInt(sessionState.month)!==currentMonth) {
+    area.innerHTML = '';
+    return;
+  }
+  const comps = activeCompetitionsForMonth(currentMonth);
+  const entries = Object.entries(comps).filter(([_,comp]) => (comp.participants||[]).includes(currentStudent) && comp.status!=='done');
+  if (!entries.length) {
+    area.innerHTML = '';
+    return;
+  }
+  area.innerHTML = entries.map(([roleId,comp]) => {
+    const role = getRoleById(roleId);
+    const hands = comp.hands || {};
+    const myHand = hands[currentStudent] || '';
+    const submittedCount = Object.keys(hands).length;
+    return `<div class="competition-card">
+      <h3>✊✌️🖐️ ${role.icon} ${role.name} 경쟁</h3>
+      <div class="mini-note">참가자 ${comp.participants.length}명 / 선발 ${comp.count}명 · 제출 ${submittedCount}/${comp.participants.length}</div>
+      <div class="competition-participants">${comp.participants.map(n=>`<span class="competition-chip">${n}${hands[n]?` ${handEmoji(hands[n])}`:''}</span>`).join('')}</div>
+      <div class="hand-grid">
+        <button class="hand-btn ${myHand==='rock'?'selected':''}" onclick="submitCompetitionHand('${roleId}','rock')">✊ 바위</button>
+        <button class="hand-btn ${myHand==='scissors'?'selected':''}" onclick="submitCompetitionHand('${roleId}','scissors')">✌️ 가위</button>
+        <button class="hand-btn ${myHand==='paper'?'selected':''}" onclick="submitCompetitionHand('${roleId}','paper')">🖐️ 보</button>
+      </div>
+      <div class="mini-note">${myHand ? `내 제출: ${HAND_LABELS[myHand]}` : '아직 제출하지 않았습니다.'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAdminSessionBox() {
+  const area = document.getElementById('adminSessionBox');
+  if (!area) return;
+  const month = parseInt(document.getElementById('adminMonthSelect')?.value || adminCurrentMonth || 6);
+  adminCurrentMonth = month;
+  let modeText = '대기 중';
+  let timer = '';
+  if (sessionState.mode === 'selection' && parseInt(sessionState.month) === month) {
+    modeText = `${ML[month]} 역할 선택 진행 중`;
+    timer = formatRemain(getRemainingMs(sessionState.selectionEndsAt));
+  } else if (sessionState.mode === 'rps' && parseInt(sessionState.month) === month) {
+    modeText = `${ML[month]} 가위바위보 진행 중`;
+    timer = formatRemain(getRemainingMs(sessionState.rpsEndsAt));
+  } else if (sessionState.mode === 'done' && parseInt(sessionState.month) === month) {
+    modeText = `${ML[month]} 배정 완료`;
+  }
+  const comps = Object.entries(activeCompetitionsForMonth(month));
+  const summary = comps.length
+    ? comps.map(([roleId, comp]) => {
+        const role = getRoleById(roleId);
+        const submitted = Object.keys(comp.hands||{}).length;
+        return `${role.name} ${submitted}/${(comp.participants||[]).length} 제출`;
+      }).join(' · ')
+    : '현재 경쟁 역할 없음';
+  area.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
+      <div>
+        <div style="font-weight:800;color:#334;">운영 단계</div>
+        <div class="meta"><span>${modeText}</span>${timer?`<span>남은 시간 ${timer}</span>`:''}</div>
+        <div class="mini-note" style="margin-top:6px;">${summary}</div>
+      </div>
+      <div class="controls">
+        <button class="action-btn btn-primary" onclick="startSelectionRound()">▶️ 1분 선택 시작</button>
+        <button class="action-btn btn-warning" onclick="closeSelectionRound()">⏹️ 신청 마감</button>
+        <button class="action-btn btn-success" onclick="finalizeRpsRound()">✅ 가위바위보 결과 반영</button>
+      </div>
+    </div>`;
+}
+
+window.startSelectionRound = async function() {
+  const month = parseInt(document.getElementById('adminMonthSelect').value);
+  if (sessionState.mode === 'selection' || sessionState.mode === 'rps') {
+    if (!confirm('현재 진행 중인 단계가 있습니다. 새로 시작하면 현재 단계를 덮어씁니다. 계속할까요?')) return;
+  }
+  showLoading('선택 시작 중...');
+  try {
+    await set(ref(db, `competitions/${month}`), null);
+    await setSession({mode:'selection', month, selectionEndsAt:Date.now()+60000, rpsEndsAt:0});
+    await addLog(`🕐 관리자: ${ML[month]} 역할 선택 1분 시작`);
+    showToast(`${ML[month]} 역할 선택이 시작되었습니다.`);
+  } catch(e) { showToast('오류: '+e.message); }
+  finally { hideLoading(); }
+};
+
+window.closeSelectionRound = async function() {
+  const month = parseInt(document.getElementById('adminMonthSelect').value);
+  await finalizeSelection(month, false);
+};
+
+async function finalizeSelection(month, silent) {
+  if (sessionState.mode !== 'selection' || parseInt(sessionState.month)!==parseInt(month)) return;
+  showLoading('신청 마감 처리 중...');
+  try {
+    const compObj = {};
+    for (const role of ROLES) {
+      const applicants = [...(state[month]?.[role.id]?.applicants || [])];
+      const assigned = [...(state[month]?.[role.id]?.assigned || [])];
+      if (applicants.length === 0) continue;
+      if (applicants.length <= role.count) {
+        await fbSetAssigned(month, role.id, [...new Set([...assigned, ...applicants])].slice(0, role.count));
+        await set(ref(db, `oneRole/${month}/${role.id}/applicants`), null);
+      } else {
+        compObj[role.id] = {
+          participants: applicants,
+          count: role.count,
+          hands: {},
+          round: 1,
+          status: 'waiting'
+        };
+      }
+    }
+    await set(ref(db, `competitions/${month}`), Object.keys(compObj).length ? compObj : null);
+    if (Object.keys(compObj).length) {
+      await setSession({mode:'rps', month, selectionEndsAt:0, rpsEndsAt:Date.now()+60000});
+      if (!silent) showToast('신청 마감! 경쟁 역할 가위바위보를 시작합니다.');
+      await addLog(`✊ 관리자: ${ML[month]} 신청 마감, 경쟁 역할 ${Object.keys(compObj).length}개 생성`);
+    } else {
+      await setSession({mode:'done', month, selectionEndsAt:0, rpsEndsAt:0});
+      if (!silent) showToast('신청 마감 및 자동 배정 완료!');
+      await addLog(`✅ 관리자: ${ML[month]} 신청 마감, 경쟁 없이 배정 완료`);
+    }
+  } catch(e) {
+    showToast('오류: '+e.message);
+  } finally { hideLoading(); }
+}
+
+window.submitCompetitionHand = async function(roleId, hand) {
+  if (!currentStudent) return;
+  if (sessionState.mode !== 'rps' || parseInt(sessionState.month)!==currentMonth) {
+    showToast('지금은 가위바위보 시간이 아닙니다.');
+    return;
+  }
+  const comp = getCompetition(currentMonth, roleId);
+  if (!comp || !(comp.participants||[]).includes(currentStudent)) {
+    showToast('이 경쟁에 참가 대상이 아닙니다.');
+    return;
+  }
+  showLoading('제출 중...');
+  try {
+    await set(ref(db, `competitions/${currentMonth}/${roleId}/hands/${fkey(currentStudent)}`), hand);
+    await addLog(`✋ ${currentStudent} → ${ML[currentMonth]} ${roleName(roleId)} ${HAND_LABELS[hand]} 제출`);
+    showToast('가위바위보 제출 완료!');
+  } catch(e) { showToast('오류: '+e.message); }
+  finally { hideLoading(); }
+};
+
+window.finalizeRpsRound = async function() {
+  const month = parseInt(document.getElementById('adminMonthSelect').value);
+  await finalizeAllCompetitions(month, false);
+};
+
+async function finalizeAllCompetitions(month, silent) {
+  if (sessionState.mode !== 'rps' || parseInt(sessionState.month)!==parseInt(month)) return;
+  showLoading('가위바위보 결과 반영 중...');
+  try {
+    const comps = activeCompetitionsForMonth(month);
+    const nextCompObj = {};
+    let hasNext = false;
+    for (const [roleId, comp] of Object.entries(comps)) {
+      const result = resolveCompetition(comp);
+      if (result.type === 'reround') {
+        hasNext = true;
+        nextCompObj[roleId] = {
+          participants: result.participants,
+          count: comp.count,
+          hands: {},
+          round: (comp.round||1)+1,
+          status: 'waiting'
+        };
+        await addLog(`🔁 ${ML[month]} ${roleName(roleId)} 재경기 (${result.participants.length}명)`);
+      } else if (result.type === 'final') {
+        await applyCompetitionWinners(month, roleId, result.winners, comp.participants || []);
+      }
+    }
+    await set(ref(db, `competitions/${month}`), hasNext ? nextCompObj : null);
+    if (hasNext) {
+      await setSession({mode:'rps', month, selectionEndsAt:0, rpsEndsAt:Date.now()+60000});
+      if (!silent) showToast('결과 반영 완료! 재경기가 필요한 역할이 있습니다.');
+    } else {
+      await setSession({mode:'done', month, selectionEndsAt:0, rpsEndsAt:0});
+      if (!silent) showToast('가위바위보 결과 반영 완료!');
+      await addLog(`🏁 관리자: ${ML[month]} 가위바위보 종료`);
+    }
+  } catch(e) { showToast('오류: '+e.message); }
+  finally { hideLoading(); }
+}
+
+function resolveCompetition(comp) {
+  const participants = [...(comp.participants || [])];
+  const hands = comp.hands || {};
+  const submitted = participants.filter(p => hands[fkey(p)] || hands[p]);
+  const normalized = {};
+  participants.forEach(p => {
+    normalized[p] = hands[fkey(p)] || hands[p] || null;
+  });
+  const active = participants.filter(p => normalized[p]);
+  if (active.length === 0) return {type:'reround', participants};
+  const unique = [...new Set(active.map(p => normalized[p]))];
+  if (unique.length === 1 || unique.length === 3) return {type:'reround', participants: active};
+  const beats = {rock:'scissors', scissors:'paper', paper:'rock'};
+  const [a,b] = unique;
+  const winnerHand = beats[a] === b ? a : b;
+  const winners = active.filter(p => normalized[p] === winnerHand);
+  const losers = participants.filter(p => !winners.includes(p));
+  if (winners.length > comp.count) return {type:'reround', participants: winners};
+  if (winners.length < comp.count) return {type:'reround', participants};
+  return {type:'final', winners, losers};
+}
+
+async function applyCompetitionWinners(month, roleId, winners, allParticipants) {
+  const role = getRoleById(roleId);
+  await fbSetAssigned(month, roleId, winners.slice(0, role.count));
+  await set(ref(db, `oneRole/${month}/${roleId}/applicants`), null);
+  await addLog(`🏆 ${ML[month]} ${role.name}: ${winners.join(', ')} 배정`);
+}
 
 /* ─── 화면 전환 ─── */
 window.goTo = function(screen) {
@@ -1310,7 +1516,7 @@ function selectStudent(name) {
   document.getElementById('myRoleBanner').innerHTML='';
   document.getElementById('roleSelectionArea').style.display='block';
   document.getElementById('roleSelectionTitle').textContent=`${name} 학생 - ${ML[currentMonth]} 역할 선택`;
-  document.getElementById('roleSelectionDesc').textContent='원하는 역할을 클릭해서 신청하세요. 정원 초과 시 가위바위보로 결정합니다.';
+  document.getElementById('roleSelectionDesc').textContent='현재 운영 단계에 따라 신청 또는 대기 상태가 달라집니다. 1분 선택 시간에만 신청할 수 있습니다.';
   renderRolesGrid(); renderSubmitArea();
 }
 const getAssignedRole = (name,m) => ROLES.find(r=>state[m]?.[r.id]?.assigned?.includes(name)) ?? null;
@@ -1330,17 +1536,19 @@ function showMyRoleBanner(role) {
 function renderRolesGrid() {
   const grid=document.getElementById('rolesGrid'); if(!grid) return; grid.innerHTML='';
   const appliedRole=currentStudent?getAppliedRole(currentStudent,currentMonth):null;
+  const canSelectNow = sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth;
   ROLES.forEach(role=>{
     const d=state[currentMonth]?.[role.id]??{applicants:[],assigned:[]};
     const applicants=d.applicants||[], assigned=d.assigned||[];
+    const comp = getCompetition(currentMonth, role.id);
     const isFullA=assigned.length>=role.count;
     const isApplied=applicants.includes(currentStudent);
     const isMyA=assigned.includes(currentStudent);
-    const isFull=applicants.length>=role.count&&!isApplied;
+    const isCompetitive = !!comp || applicants.length>role.count;
     const hasOther=appliedRole&&appliedRole.id!==role.id;
     const card=document.createElement('div');
     card.className='role-select-card';
-    let sh='', clickable=true;
+    let sh='', clickable=canSelectNow;
     if (isMyA||isFullA) {
       card.classList.add('r-assigned');
       sh=`<div style="font-size:.7rem;color:#4CAF50;font-weight:600;margin-top:3px;">✅ ${isMyA?'배정됨':'배정 완료'}</div>`;
@@ -1348,22 +1556,28 @@ function renderRolesGrid() {
     } else if (isApplied) {
       card.classList.add('r-selected');
       sh=`<div style="font-size:.7rem;color:#4facfe;font-weight:600;margin-top:3px;">✔ 신청됨</div>`;
-    } else if (isFull) {
+    } else if (isCompetitive) {
       card.classList.add('r-full');
-      sh=`<div style="font-size:.7rem;color:#ff9800;font-weight:600;margin-top:3px;">⚡ 경쟁 중 (${applicants.length}/${role.count})</div>`;
+      sh=`<div style="font-size:.7rem;color:#ff9800;font-weight:600;margin-top:3px;">⚡ 경쟁 예정/진행 중 (${applicants.length}/${role.count})</div>`;
     } else if (hasOther) {
       card.classList.add('disabled');
       sh=`<div class="r-count">${applicants.length}/${role.count}명 신청</div>`; clickable=false;
     } else {
       sh=`<div class="r-count">${applicants.length}/${role.count}명 신청</div>`;
     }
+    if (!canSelectNow && !isApplied) clickable=false;
     card.innerHTML=`<div class="r-icon">${role.icon}</div><div class="r-title">${role.name}</div><div class="r-time">${role.time}</div>${sh}`;
     if (clickable&&currentStudent) card.onclick=()=>toggleApply(role.id);
+    else if (!canSelectNow) card.title='지금은 신청 시간이 아닙니다.';
     grid.appendChild(card);
   });
 }
 async function toggleApply(roleId) {
   if (!currentStudent) return;
+  if (!(sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth)) {
+    showToast('지금은 역할 신청 시간이 아닙니다.');
+    return;
+  }
   const d=state[currentMonth][roleId];
   const role=ROLES.find(r=>r.id===roleId);
   const appliedRole=getAppliedRole(currentStudent,currentMonth);
@@ -1376,10 +1590,6 @@ async function toggleApply(roleId) {
     } else {
       await fbAddApplicant(currentMonth,roleId,currentStudent);
       showToast(`${role.name} 신청 완료!`);
-      setTimeout(()=>{
-        const upd=state[currentMonth][roleId];
-        if (upd.applicants.length>role.count) openRpsModal(roleId);
-      },700);
     }
   } catch(e) { showToast('오류: '+e.message); }
   finally { hideLoading(); }
@@ -1387,21 +1597,26 @@ async function toggleApply(roleId) {
 function renderSubmitArea() {
   const area=document.getElementById('submitArea'); if(!area||!currentStudent) return;
   const applied=getAppliedRole(currentStudent,currentMonth);
+  const canSelectNow = sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth;
   if (applied) {
-    const ov=state[currentMonth][applied.id].applicants.length>applied.count;
+    const ov=(state[currentMonth][applied.id].applicants||[]).length>applied.count || !!getCompetition(currentMonth, applied.id);
     area.innerHTML=`
       <div style="background:#f0faff;border-radius:12px;padding:14px;margin-bottom:14px;">
         <span style="font-size:.88rem;color:#555;">신청한 역할: <strong>${applied.icon} ${applied.name}</strong>
-          ${ov?`<span class="waiting-badge" style="margin-left:7px;">경쟁 중</span>`:''}
+          ${ov?`<span class="waiting-badge" style="margin-left:7px;">경쟁 대상</span>`:''}
         </span>
       </div>
-      <button class="action-btn btn-danger" onclick="cancelApply()">❌ 신청 취소</button>`;
+      ${canSelectNow?`<button class="action-btn btn-danger" onclick="cancelApply()">❌ 신청 취소</button>`:`<p class="mini-note">신청 시간 종료 후에는 취소할 수 없습니다.</p>`}`;
   } else {
-    area.innerHTML=`<p style="color:#aaa;font-size:.88rem;">역할을 선택해주세요.</p>`;
+    area.innerHTML=`<p style="color:#aaa;font-size:.88rem;">${canSelectNow?'역할을 선택해주세요.':'관리자가 역할 선택을 시작하면 신청할 수 있습니다.'}</p>`;
   }
 }
 window.cancelApply = async function() {
   if (!currentStudent) return;
+  if (!(sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth)) {
+    showToast('지금은 신청 취소가 불가능합니다.');
+    return;
+  }
   const applied=getAppliedRole(currentStudent,currentMonth); if(!applied) return;
   showLoading('취소 중...');
   try { await fbRemoveApplicant(currentMonth,applied.id,currentStudent); showToast('신청이 취소되었습니다.'); }
@@ -1509,7 +1724,7 @@ window.closeRpsModal = function() {
 
 /* ─── 관리자 화면 ─── */
 function initAdminScreen() {
-  renderStats(); renderOverview(); renderMonthSelectBtns(); renderMonthlyTable(); renderStudentStatus(); renderManageTable();
+  renderStats(); renderAdminSessionBox(); renderOverview(); renderMonthSelectBtns(); renderMonthlyTable(); renderStudentStatus(); renderManageTable();
 }
 function renderStats() {
   const grid=document.getElementById('statsGrid'); if(!grid) return;
@@ -1533,12 +1748,15 @@ function renderOverview() {
     if (assigned.length>0) card.classList.add('has-assigned');
     else if (applicants.length>=role.count) card.classList.add('full-applied');
     else if (applicants.length>0) card.classList.add('has-applicants');
+    const comp = getCompetition(month, role.id);
+    const submitted = comp ? Object.keys(comp.hands||{}).length : 0;
     card.innerHTML=`
       <div class="role-card-header">
         <span class="role-name">${role.icon} ${role.name}</span>
         <span class="role-badge">${assigned.length}/${role.count}명</span>
       </div>
       <div class="role-time">⏰ ${role.time}</div>
+      ${comp?`<div style="margin:6px 0 8px;color:#d35400;font-size:.8rem;font-weight:700;">✊ 경쟁 진행 중 · 제출 ${submitted}/${(comp.participants||[]).length}</div>`:''}
       ${assigned.length>0?`<div style="margin-bottom:6px;">${assigned.map(a=>`<span class="assigned-tag">✅ ${a}</span>`).join('')}</div>`:''}
       <div class="applicants">${applicants.length>0?applicants.map(a=>`<span class="applicant-tag">📝 ${a}</span>`).join(''):'<span class="no-applicant">신청자 없음</span>'}</div>`;
     grid.appendChild(card);
@@ -1667,14 +1885,14 @@ window.closeEditModal = function() { document.getElementById('editModal').classL
 window.resetMonth = async function() {
   if(!confirm(`${ML[manageCurrentMonth]} 배정을 초기화하시겠습니까?`)) return;
   showLoading('초기화 중...');
-  try { await fbClearMonth(manageCurrentMonth); await addLog(`🗑️ 관리자: ${ML[manageCurrentMonth]} 초기화`); showToast(`${ML[manageCurrentMonth]} 초기화 완료`); }
+  try { await fbClearMonth(manageCurrentMonth); await set(ref(db,`competitions/${manageCurrentMonth}`), null); if(parseInt(sessionState.month)===manageCurrentMonth) await setSession({mode:'idle', month:manageCurrentMonth, selectionEndsAt:0, rpsEndsAt:0}); await addLog(`🗑️ 관리자: ${ML[manageCurrentMonth]} 초기화`); showToast(`${ML[manageCurrentMonth]} 초기화 완료`); }
   catch(e) { showToast('오류: '+e.message); }
   finally { hideLoading(); }
 };
 window.resetAllData = async function() {
   if(!confirm('전체 데이터를 초기화하시겠습니까? 되돌릴 수 없습니다.')) return;
   showLoading('전체 초기화 중...');
-  try { await fbClearAll(); showToast('전체 초기화 완료'); }
+  try { await fbClearAll(); await set(ref(db,'competitions'), null); await setSession({mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0}); showToast('전체 초기화 완료'); }
   catch(e) { showToast('오류: '+e.message); }
   finally { hideLoading(); }
 };
