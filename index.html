@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>우리 반 1인 1역 정하기</title>
+<title>교실 설계소</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -47,7 +47,7 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .x{border:none;background:none;font-size:1.3rem;cursor:pointer}
 .addcard{border:3px dashed #e3d6bf;border-radius:18px;background:none;font:inherit;font-size:1.2rem;color:#b5a78e;min-height:150px;cursor:pointer}
 .bottombar{position:sticky;bottom:10px;text-align:center}
-.timer .tnum{font-size:3.5rem;font-weight:900}.timer .tbar{height:14px;background:#f1e6d2;border-radius:999px;overflow:hidden;max-width:500px;margin:0 auto}.timer .tbar i{display:block;height:100%;width:100%;background:#5cc98b;transition:width .25s linear}.timer.hurry .tnum{color:#e03b4b}.timer.hurry .tbar i{background:#ff5a6a}
+.timer .tnum{font-size:3rem;font-weight:900}.timer .tbar{height:14px;background:#f1e6d2;border-radius:999px;overflow:hidden;max-width:500px;margin:0 auto}.timer .tbar i{display:block;height:100%;width:100%;background:#5cc98b;transition:width .25s linear}.timer.hurry .tnum{color:#e03b4b}.timer.hurry .tbar i{background:#ff5a6a}
 .steps{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.steps span{padding:6px 12px;border-radius:999px;background:#f1e6d2;color:#9a8c74;font-weight:700;font-size:.9rem}.steps span.on{background:#ff8a3d;color:#fff}.steps span.done{background:#ffd9bd;color:#b45a1e}
 .cards{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:12px 0}
 .pcard{width:110px;height:150px;perspective:600px;border:none;background:none;padding:0;cursor:pointer;font:inherit}
@@ -80,14 +80,44 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .thead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .footer{text-align:center;margin-top:30px}
 @media print{.btn,.steps,.footer,.me,.banner,.noprint{display:none!important}body{background:#fff}.panel{box-shadow:none}}
+.logo{font-size:4rem}
+.modgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:16px 0}
+.modcard{font:inherit;text-align:center;background:#fff;border:3px solid #f1e6d2;border-radius:24px;padding:24px;cursor:pointer;box-shadow:0 6px 0 #f1e6d2;color:#2b2b3a}
+.modcard:active{transform:translateY(3px)}.modcard .em{font-size:3.4rem}.modcard p{color:#8a8070}
+.thead .btn{margin:0}
+.classroom{background:#f7f1e6;border-radius:18px;padding:14px;margin:12px auto;max-width:720px}
+.desk{text-align:center;background:#5b4a3a;color:#fff;border-radius:10px;padding:8px;font-weight:800;margin:0 auto 14px;max-width:60%}
+.sgrid{display:grid;gap:8px}
+.cell{min-height:64px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:#4a3f30;box-shadow:0 3px 0 rgba(0,0,0,.12);cursor:default;user-select:none;text-align:center;padding:4px;transition:transform .1s}
+.cell[onclick]:not([onclick=""]){cursor:pointer}
+.cell.aisle{background:transparent;box-shadow:none;border:2px dashed #e0d5c0;color:#c9bca4;font-weight:400}
+.cell.drop.hover{transform:scale(1.08);outline:4px solid #ff8a3d}
+.cell.mine{outline:4px solid #ff8a3d}
+.cell.seat b{font-size:1.05rem}.cell.seat small{font-weight:600;opacity:.6;font-size:.75rem}
+.cell.swap{outline:4px dashed #7b6cff;transform:scale(1.05)}
+.rcard[data-zone].hover{outline:4px solid #ff8a3d}
+.dragzone{position:sticky;top:8px;z-index:5;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(255,248,236,.92);border-radius:999px;padding:8px;margin:10px 0}
+.namechip{display:inline-block;background:#ff8a3d;color:#fff;font-weight:900;font-size:1.3rem;padding:14px 26px;border-radius:999px;box-shadow:0 5px 0 #d9661c;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.namechip.ghost{position:fixed;z-index:99;pointer-events:none;transform:translate(-50%,-50%) scale(1.1);opacity:.9}
+.mine-msg{font-size:1.15rem;color:#d9661c}
+.zdot{display:inline-block;width:18px;height:18px;border-radius:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.1)}
+.zdot.aislec{border:2px dashed #ccc}
+.zonelist{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.zitem{display:flex;align-items:center;gap:6px;border:3px solid #eee;border-radius:14px;padding:6px 10px;cursor:pointer;background:#fff}
+.zitem.on{border-color:#ff8a3d;background:#fff3e8}
+.zitem input{width:90px;font:inherit;border:1px solid #eee;border-radius:8px;padding:4px 6px}
+.idea{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px dashed #eee;padding:10px 4px}
+.idea.adopted{background:#f3fcf6;border-radius:12px}
+.itext{font-size:1.1rem;font-weight:700;flex:1;min-width:200px}
+.principles{background:#fffbe0}.principles ol{margin:6px 0;padding-left:22px;font-size:1.1rem;line-height:1.7}
+.chip:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
 /* =========================================================
-   ⚙️ 설정 — 여러 태블릿에서 쓰려면 Firebase 설정을 채워 주세요.
-   비워 두면 '체험 모드'(이 브라우저 안에서만 저장)로 동작해요.
+   교실 설계소 — 1인 1역 정하기 + 자리 배치 정하기
    ========================================================= */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD-a2gTWcPZnrGeURBJi9aWa2_Jxgan8ek",
@@ -100,6 +130,7 @@ const FIREBASE_CONFIG = {
 };
 const TEACHER_PIN = "126758";          // 선생님 화면 비밀번호
 const TIMES = ['아침 시간','쉬는 시간','점심 시간','수업 시간','하교 전'];
+const ZONE_COLORS = ['#ffd6a5','#caffbf','#9bf6ff','#bdb2ff','#ffc6ff','#fdffb6','#a0c4ff','#ffadad'];
 
 const DEFAULT_ROLES = [
   ['🦎','히로 돌보미','히로 먹이·물 챙기고 사육장 온도 확인하기','히로가 건강하려면 매일 같은 시간에 돌봐 줄 친구가 꼭 필요해요.','아침 시간',2],
@@ -164,8 +195,10 @@ try { store = (window.firebase && FIREBASE_CONFIG.apiKey) ? makeFirebaseStore() 
 catch(e){ console.error(e); store = makeLocalStore(); }
 
 /* ---------------- 상태 ---------------- */
-let S = {}, loaded = false, closing = false, initDone = false, pending = false;
-const ui = { bigView: false, draft: {name: '', desc: '', reason: '', time: '쉬는 시간', slots: 1} };
+let S = {}, loaded = false, closing = false, initDone = false, seatInitDone = false, pending = false;
+let MOD = 'role';   // 지금 다루는 활동: 'role'(1인 1역) | 'seat'(자리 배치)
+const emptyDraft = () => ({name: '', desc: '', reason: '', time: '쉬는 시간', slots: 1});
+const ui = { mod: null, bigView: false, draft: emptyDraft(), idea: '', paint: 'z1', sel: [], swap: null };
 const me = { role: null, sid: null };
 try {
   if (params.get('mode') === 'student') me.role = 'student';
@@ -176,15 +209,37 @@ try {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = p => p + Math.random().toString(36).slice(2, 8);
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const isSeat = () => MOD === 'seat';
+const D = () => isSeat() ? (S.seat || {}) : S;             // 지금 활동의 데이터
+const P = p => (isSeat() ? 'seat/' : '') + p;                // 지금 활동의 저장 경로
+const phase = () => D().phase || 'setup';
 const roles = () => Object.entries(S.roles || {}).map(([id, r]) => ({id, ...r})).sort((a, b) => (a.order || 0) - (b.order || 0));
 const students = () => Object.entries(S.students || {}).map(([id, s]) => ({id, ...s})).sort((a, b) => a.no - b.no);
-const assigned = () => S.assigned || {};
 const stuName = id => S.students?.[id]?.name || '?';
-const rem = rid => (+S.roles?.[rid]?.slots || 0) - Object.values(assigned()).filter(x => x === rid).length;
+const layout = () => S.seat?.layout || {rows: 4, cols: 4, cells: {}};
+const cellKey = (r, c) => 'c' + r + '_' + c;
+function seatCells(){                                         // 배치도 안의 자리 칸 [{key,r,c,z}]
+  const L = layout(), Z = S.seat?.zones || {}, out = [];
+  for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++){
+    const k = cellKey(r, c), z = L.cells?.[k];
+    if (z && Z[z]) out.push({key: k, r, c, z});
+  }
+  return out;
+}
+function zones(){
+  const cells = seatCells();
+  return Object.entries(S.seat?.zones || {}).map(([id, z]) => ({id, ...z, emoji: '🪑', slots: cells.filter(c => c.z === id).length}))
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+const items = () => isSeat() ? zones() : roles();               // 지원할 대상(역할 또는 자리 구역)
+const itemOf = id => isSeat() ? zones().find(z => z.id === id) : (S.roles?.[id] ? {id, ...S.roles[id]} : null);
+const assigned = () => D().assigned || {};
+const rem = id => (+(itemOf(id)?.slots) || 0) - Object.values(assigned()).filter(x => x === id).length;
 const unassigned = () => students().filter(s => !assigned()[s.id]);
-const totalSlots = () => roles().reduce((a, r) => a + (+r.slots || 0), 0);
+const totalSlots = () => items().reduce((a, r) => a + (+r.slots || 0), 0);
 const dur = () => S.settings?.duration || 180;
 const studentLink = () => location.origin + location.pathname + '?room=' + encodeURIComponent(ROOM) + '&mode=student';
+const WORD = () => isSeat() ? '자리 구역' : '역할';
 
 function toast(msg){
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
@@ -203,6 +258,14 @@ function defaultsMap(){
   up.phase = 'setup'; up['settings/duration'] = 180;
   return up;
 }
+function seatDefaultsMap(){
+  const up = {}, names = ['앞줄', '둘째 줄', '셋째 줄', '뒷줄'], cells = {};
+  names.forEach((n, i) => up['seat/zones/z' + (i + 1)] = {name: n, color: ZONE_COLORS[i], order: i});
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) cells[cellKey(r, c)] = 'z' + (r + 1);
+  up['seat/layout'] = {rows: 4, cols: 4, cells};
+  up['seat/phase'] = 'setup';
+  return up;
+}
 
 /* ---------------- 동작 ---------------- */
 const act = {
@@ -213,11 +276,19 @@ const act = {
     me.role = 'teacher'; try { sessionStorage.setItem('oneRole_t_' + ROOM, '1'); } catch(e){}
     render();
   },
-  logoutTeacher(){ me.role = null; try { sessionStorage.removeItem('oneRole_t_' + ROOM); } catch(e){} render(); },
+  logoutTeacher(){ me.role = null; ui.mod = null; try { sessionStorage.removeItem('oneRole_t_' + ROOM); } catch(e){} render(); },
   chooseMe(sid){ me.sid = sid; try { localStorage.setItem('oneRole_sid_' + ROOM, sid); } catch(e){} render(); },
   forgetMe(){ me.sid = null; try { localStorage.removeItem('oneRole_sid_' + ROOM); } catch(e){} render(); },
   toggleBig(){ ui.bigView = !ui.bigView; render(); },
+  openMod(m){
+    ui.mod = m; ui.sel = []; ui.swap = null;
+    const up = {active: m};
+    if (m === 'seat' && !S.seat?.layout) Object.assign(up, seatDefaultsMap());
+    store.update(up); window.scrollTo(0, 0);
+  },
+  hub(){ ui.mod = null; render(); window.scrollTo(0, 0); },
 
+  /* 역할 편집 */
   editRole(id, f, v){ store.set('roles/' + id + '/' + f, v); },
   slot(id, d){ const n = Math.max(1, Math.min(15, (+S.roles[id].slots || 1) + d)); store.set('roles/' + id + '/slots', n); },
   addRole(){
@@ -225,6 +296,7 @@ const act = {
     store.set('roles/' + uid('r'), {emoji: '⭐', name: '새 역할', desc: '', reason: '', time: '쉬는 시간', slots: 1, order});
   },
   delRole(id){ if (confirm('“' + S.roles[id].name + '” 역할을 지울까요?')) store.set('roles/' + id, null); },
+  loadExamples(){ if (confirm('예시 역할 11개를 추가할까요?')) store.update(exampleRolesMap()); },
   saveNames(){
     const lines = document.getElementById('names').value.split('\n').map(s => s.trim()).filter(Boolean);
     if (!lines.length) return toast('이름을 한 명 이상 적어 주세요');
@@ -233,31 +305,77 @@ const act = {
   },
   setDur(s){ store.set('settings/duration', s); },
 
-  startRound(){
-    const first = (S.phase || 'setup') === 'setup';
-    const d = dur();
-    const up = {phase: 'apply', round: first ? 1 : (S.round || 1) + 1, picks: null, games: null, endsAt: store.now() + d * 1000, duration: d};
-    if (first) up.assigned = null;
+  /* 배치도 편집 (선생님) */
+  setPaint(z){ ui.paint = z; render(); },
+  paint(k){ store.set('seat/layout/cells/' + k, ui.paint === 'aisle' ? null : ui.paint); },
+  resize(f, d){
+    const L = layout(); const n = Math.max(1, Math.min(8, L[f] + d));
+    const up = {['seat/layout/' + f]: n};
+    if (d > 0){ // 새로 생긴 칸은 가장 가까운 구역으로 채움
+      const rows = f === 'rows' ? n : L.rows, cols = f === 'cols' ? n : L.cols;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++){
+        const k = cellKey(r, c);
+        if ((f === 'rows' && r >= L.rows) || (f === 'cols' && c >= L.cols)){
+          const near = L.cells?.[f === 'rows' ? cellKey(L.rows - 1, c) : cellKey(r, L.cols - 1)];
+          if (near) up['seat/layout/cells/' + k] = near;
+        }
+      }
+    }
     store.update(up);
   },
-  addTime(sec){ store.update({endsAt: (S.endsAt || store.now()) + sec * 1000, duration: (S.duration || dur()) + sec}); },
-
-  pick(rid){
-    if (S.phase !== 'apply' || store.now() > (S.endsAt || 0)) return toast('지원 시간이 끝났어요');
-    if (assigned()[me.sid]) return;
-    store.set('picks/' + me.sid, rid);
+  addZone(){
+    const zs = zones(); const id = uid('z');
+    store.set('seat/zones/' + id, {name: '새 구역', color: ZONE_COLORS[zs.length % ZONE_COLORS.length], order: zs.length});
+    ui.paint = id;
   },
+  renameZone(id, v){ store.set('seat/zones/' + id + '/name', v.trim() || '구역'); },
+  delZone(id){
+    if (!confirm('이 구역을 지울까요? 이 구역 칸은 통로가 돼요.')) return;
+    const up = {['seat/zones/' + id]: null};
+    Object.entries(layout().cells || {}).forEach(([k, z]) => { if (z === id) up['seat/layout/cells/' + k] = null; });
+    if (ui.paint === id) ui.paint = 'aisle';
+    store.update(up);
+  },
+  /* 선생님만 보는 설정 */
+  selStu(sid){ const i = ui.sel.indexOf(sid); if (i >= 0) ui.sel.splice(i, 1); else { ui.sel.push(sid); if (ui.sel.length > 2) ui.sel.shift(); } render(); },
+  fix(z){ if (ui.sel.length !== 1) return; store.set('seat/fixed/' + ui.sel[0], z); ui.sel = []; },
+  unfix(sid){ store.set('seat/fixed/' + sid, null); },
+  addApart(){ if (ui.sel.length !== 2) return; store.set('seat/apart/' + uid('a'), {a: ui.sel[0], b: ui.sel[1]}); ui.sel = []; },
+  delApart(id){ store.set('seat/apart/' + id, null); },
 
+  /* 지원 · 미니게임 (두 활동 공통) */
+  startRound(){
+    const first = phase() === 'setup';
+    const d = dur();
+    const up = {[P('phase')]: 'apply', [P('round')]: first ? 1 : (D().round || 1) + 1, [P('picks')]: null, [P('games')]: null,
+                [P('endsAt')]: store.now() + d * 1000, [P('duration')]: d};
+    if (first){
+      if (isSeat()){
+        const fx = {}, zs = new Set(zones().map(z => z.id));
+        Object.entries(S.seat?.fixed || {}).forEach(([sid, z]) => { if (S.students?.[sid] && zs.has(z)) fx[sid] = z; });
+        up['seat/assigned'] = Object.keys(fx).length ? fx : null;
+        up['seat/seats'] = null;
+      } else up.assigned = null;
+    }
+    store.update(up);
+  },
+  addTime(sec){ store.update({[P('endsAt')]: (D().endsAt || store.now()) + sec * 1000, [P('duration')]: (D().duration || dur()) + sec}); },
+  pick(id){
+    if (phase() !== 'apply' || store.now() > (D().endsAt || 0)) return toast('지원 시간이 끝났어요');
+    if (assigned()[me.sid]) return;
+    if (rem(id) <= 0) return toast('남은 자리가 없어요');
+    store.set(P('picks/' + me.sid), id);
+  },
   async closeRound(){
-    if (closing || S.phase !== 'apply') return;
+    if (closing || phase() !== 'apply') return;
     closing = true;
     try {
-      const picks = S.picks || {}, un = unassigned(), up = {}, games = {}, byRole = {};
-      un.forEach(s => { const r = picks[s.id]; if (r && S.roles?.[r] && rem(r) > 0) (byRole[r] = byRole[r] || []).push(s.id); });
+      const picks = D().picks || {}, un = unassigned(), up = {}, games = {}, byItem = {};
+      un.forEach(s => { const r = picks[s.id]; if (r && itemOf(r) && rem(r) > 0) (byItem[r] = byItem[r] || []).push(s.id); });
       let newly = 0;
-      for (const [rid, ids] of Object.entries(byRole)){
+      for (const [rid, ids] of Object.entries(byItem)){
         const R = rem(rid);
-        if (ids.length <= R){ ids.forEach(id => { up['assigned/' + id] = rid; newly++; }); }
+        if (ids.length <= R){ ids.forEach(id => { up[P('assigned/' + id)] = rid; newly++; }); }
         else {
           const wins = shuffle([...Array(ids.length).keys()]).slice(0, R);
           const cards = {}; for (let i = 0; i < ids.length; i++) cards['c' + i] = {win: wins.includes(i)};
@@ -266,68 +384,95 @@ const act = {
         }
       }
       const hasGame = Object.keys(games).length > 0;
-      up.games = hasGame ? games : null;
-      up.phase = hasGame ? 'game' : (un.length - newly === 0 ? 'done' : 'closed');
-      up.endsAt = null;
+      up[P('games')] = hasGame ? games : null;
+      up[P('phase')] = hasGame ? 'game' : (un.length - newly === 0 ? 'done' : 'closed');
+      up[P('endsAt')] = null;
       await store.update(up);
     } finally { closing = false; }
   },
-
   async pickCard(rid, cid){
-    const g = S.games?.[rid];
+    const g = D().games?.[rid];
     if (!g || g.revealed || !g.players?.[me.sid]) return;
     if (Object.values(g.cards || {}).some(c => c.by === me.sid)) return;
-    const ok = await store.claim('games/' + rid + '/cards/' + cid + '/by', me.sid);
+    const ok = await store.claim(P('games/' + rid + '/cards/' + cid + '/by'), me.sid);
     if (!ok) toast('앗, 다른 친구가 먼저 골랐어요! 다른 카드를 골라요');
   },
   autoFill(rid, up){
-    const g = S.games[rid]; const cards = g.cards || {};
+    const g = D().games[rid]; const cards = g.cards || {};
     const taken = new Set(Object.values(cards).map(c => c.by).filter(Boolean));
     const waiting = shuffle(Object.keys(g.players || {}).filter(p => !taken.has(p)));
     const free = Object.keys(cards).filter(cid => !cards[cid].by);
-    waiting.forEach((sid, i) => { if (free[i]) up['games/' + rid + '/cards/' + free[i] + '/by'] = sid; });
+    waiting.forEach((sid, i) => { if (free[i]) up[P('games/' + rid + '/cards/' + free[i] + '/by')] = sid; });
     return up;
   },
   autoPick(rid){ store.update(act.autoFill(rid, {})); },
   revealUp(rid, up){
     act.autoFill(rid, up);
-    const cards = S.games[rid].cards || {};
+    const cards = D().games[rid].cards || {};
     for (const cid in cards){
-      const by = up['games/' + rid + '/cards/' + cid + '/by'] || cards[cid].by;
-      if (cards[cid].win && by) up['assigned/' + by] = rid;
+      const by = up[P('games/' + rid + '/cards/' + cid + '/by')] || cards[cid].by;
+      if (cards[cid].win && by) up[P('assigned/' + by)] = rid;
     }
-    up['games/' + rid + '/revealed'] = true;
+    up[P('games/' + rid + '/revealed')] = true;
     return up;
   },
   reveal(rid){ store.update(act.revealUp(rid, {})); },
   revealAll(){
     const up = {};
-    Object.entries(S.games || {}).forEach(([rid, g]) => { if (!g.revealed) act.revealUp(rid, up); });
+    Object.entries(D().games || {}).forEach(([rid, g]) => { if (!g.revealed) act.revealUp(rid, up); });
     store.update(up);
   },
-  afterGames(){ store.update({games: null, phase: unassigned().length ? 'closed' : 'done'}); },
-
+  afterGames(){ store.update({[P('games')]: null, [P('phase')]: unassigned().length ? 'closed' : 'done'}); },
   randomRest(){
     const un = shuffle(unassigned().map(s => s.id));
-    const seats = []; roles().forEach(r => { for (let i = 0; i < rem(r.id); i++) seats.push(r.id); });
+    const seats = []; items().forEach(r => { for (let i = 0; i < rem(r.id); i++) seats.push(r.id); });
     shuffle(seats);
     const up = {}; let left = un.length;
-    un.forEach((sid, i) => { if (seats[i]){ up['assigned/' + sid] = seats[i]; left--; } });
-    up.phase = left === 0 ? 'done' : 'closed';
+    un.forEach((sid, i) => { if (seats[i]){ up[P('assigned/' + sid)] = seats[i]; left--; } });
+    up[P('phase')] = left === 0 ? 'done' : 'closed';
     store.update(up);
   },
   backToSetup(){
-    if (!confirm('배정 결과를 지우고 역할 토의 단계로 돌아갈까요? (역할과 명단은 그대로 남아요)')) return;
-    store.update({phase: 'setup', assigned: null, picks: null, games: null, round: null, endsAt: null});
+    if (!confirm('지원 결과를 지우고 토의 단계로 돌아갈까요? (제안·명단·설정은 그대로 남아요)')) return;
+    const up = {[P('phase')]: 'setup', [P('assigned')]: null, [P('picks')]: null, [P('games')]: null, [P('round')]: null, [P('endsAt')]: null};
+    if (isSeat()) up['seat/seats'] = null;
+    store.update(up);
   },
   resetAll(){
-    if (!confirm('역할·명단·결과를 모두 지우고 기본값으로 되돌릴까요?')) return;
-    store.update(Object.assign({roles: null, students: null, proposals: null, assigned: null, picks: null, games: null, round: null, endsAt: null}, {}))
+    if (!confirm('역할·자리·명단·제안을 모두 지우고 처음 상태로 되돌릴까요?')) return;
+    store.update({roles: null, students: null, proposals: null, assigned: null, picks: null, games: null, round: null, endsAt: null, seat: null, active: null})
       .then(() => store.update(defaultsMap()));
+    ui.mod = null;
   },
   print(){ window.print(); },
 
-  loadExamples(){ if (confirm('예시 역할 11개를 추가할까요?')) store.update(exampleRolesMap()); },
+  /* 자리 최종 배치 */
+  placeSeats(){
+    const A = S.seat?.assigned || {}, apart = Object.values(S.seat?.apart || {}), cells = seatCells();
+    const byZone = {}; cells.forEach(c => (byZone[c.z] = byZone[c.z] || []).push(c));
+    const pos = {}; cells.forEach(c => pos[c.key] = c);
+    let best = null, bestBad = Infinity;
+    for (let t = 0; t < 400 && bestBad > 0; t++){
+      const seats = {}, where = {};
+      Object.entries(byZone).forEach(([z, cs]) => {
+        const studs = shuffle(Object.keys(A).filter(s => A[s] === z)); const cc = shuffle(cs.slice());
+        studs.forEach((s, i) => { if (cc[i]){ seats[cc[i].key] = s; where[s] = cc[i]; } });
+      });
+      const bad = apart.filter(p => where[p.a] && where[p.b] && Math.max(Math.abs(where[p.a].r - where[p.b].r), Math.abs(where[p.a].c - where[p.b].c)) <= 1).length;
+      if (bad < bestBad){ best = seats; bestBad = bad; }
+    }
+    store.set('seat/seats', best);
+    toast(bestBad ? `떨어뜨릴 친구 ${bestBad}쌍이 가까이 앉았어요. 자리를 눌러 직접 바꿔 주세요` : '자리 배치 완료! 🎉');
+  },
+  tapSeat(k){
+    if (!ui.swap){ ui.swap = k; render(); return; }
+    if (ui.swap === k){ ui.swap = null; render(); return; }
+    const s = S.seat?.seats || {}, from = ui.swap, a = s[from] || null, b = s[k] || null;
+    ui.swap = null;
+    store.update({['seat/seats/' + from]: b, ['seat/seats/' + k]: a});
+  },
+
+  /* 학생 제안: 역할 */
   draftSlot(d){ ui.draft.slots = Math.max(1, Math.min(15, ui.draft.slots + d)); render(); },
   draftTime(t){ ui.draft.time = t; render(); },
   propose(){
@@ -335,28 +480,63 @@ const act = {
     if (!d.name.trim()) return toast('역할 이름을 적어 주세요');
     store.set('proposals/' + uid('p'), {name: d.name.trim(), desc: d.desc.trim(), reason: d.reason.trim(), time: d.time, slots: d.slots, by: me.sid, at: store.now()})
       .then(() => toast('제안을 보냈어요! 📮'));
-    ui.draft = {name: '', desc: '', reason: '', time: '쉬는 시간', slots: 1};
+    ui.draft = emptyDraft();
     if (document.activeElement) document.activeElement.blur();
     render();
   },
-  like(pid){
-    const has = S.proposals?.[pid]?.likes?.[me.sid];
-    store.set('proposals/' + pid + '/likes/' + me.sid, has ? null : true);
-  },
-  delProposal(pid){ if (confirm('이 제안을 지울까요?')) store.set('proposals/' + pid, null); },
   adopt(pid){
     const pr = S.proposals[pid]; const rid = uid('r');
     const order = Math.max(0, ...roles().map(r => r.order || 0)) + 1;
     store.update({['roles/' + rid]: {emoji: '⭐', name: pr.name, desc: pr.desc || '', reason: pr.reason || '', time: pr.time || '쉬는 시간', slots: pr.slots || 1, order},
                   ['proposals/' + pid + '/adopted']: rid});
     toast('“' + pr.name + '” 역할을 추가했어요');
-  }
+  },
+  /* 학생 제안: 자리 원칙 */
+  sendIdea(){
+    const t = ui.idea.trim();
+    if (!t) return toast('의견을 적어 주세요');
+    store.set('seat/ideas/' + uid('i'), {text: t, by: me.sid, at: store.now()}).then(() => toast('의견을 보냈어요! 📮'));
+    ui.idea = '';
+    if (document.activeElement) document.activeElement.blur();
+    render();
+  },
+  adoptIdea(id){ const v = !S.seat?.ideas?.[id]?.adopted; store.set('seat/ideas/' + id + '/adopted', v || null); },
+  /* 공감·삭제 (공통) */
+  like(path){
+    const has = path.split('/').reduce((c, k) => c?.[k], S)?.likes?.[me.sid];
+    store.set(path + '/likes/' + me.sid, has ? null : true);
+  },
+  delPost(path){ if (confirm('이 제안을 지울까요?')) store.set(path, null); }
 };
+
+/* ---------------- 이름 끌어다 놓기 ---------------- */
+function startDrag(e){
+  if (!e.isPrimary) return;
+  e.preventDefault();
+  const ghost = e.currentTarget.cloneNode(true);
+  ghost.classList.add('ghost'); ghost.removeAttribute('onpointerdown');
+  document.body.appendChild(ghost);
+  const zoneAt = ev => document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-zone]');
+  const clearHover = () => document.querySelectorAll('.hover').forEach(x => x.classList.remove('hover'));
+  const move = ev => {
+    ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+    clearHover(); const el = zoneAt(ev);
+    if (el) document.querySelectorAll(`[data-zone="${el.dataset.zone}"]`).forEach(x => x.classList.add('hover'));
+  };
+  const up = ev => {
+    document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+    ghost.remove(); clearHover();
+    const el = ev.type === 'pointerup' ? zoneAt(ev) : null;
+    if (el) act.pick(el.dataset.zone);
+  };
+  move(e);
+  document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+}
 
 /* ---------------- 공통 조각 ---------------- */
 function roleCard(r, extra = '', cls = '', click = ''){
   return `<div class="rcard ${cls}" ${click ? `onclick="${click}"` : ''}>
-    <div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div><div class="tag">🕘 ${esc(r.time)} · 👥 ${r.slots}명</div></div></div>
+    <div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div><div class="tag">${r.time ? '🕘 ' + esc(r.time) + ' · ' : ''}👥 ${r.slots}${isSeat() ? '자리' : '명'}</div></div></div>
     ${r.desc ? `<div class="desc">🛠 ${esc(r.desc)}</div>` : ''}
     ${r.reason ? `<div class="reason">💡 ${esc(r.reason)}</div>` : ''}
     ${extra}</div>`;
@@ -374,22 +554,21 @@ function roleEditor(r){
 }
 const timerHtml = () => `<div class="timer" data-timer><div class="tnum">--</div><div class="tbar"><i></i></div></div>`;
 function stepper(){
-  const p = S.phase || 'setup';
-  const idx = {setup: 0, apply: 1, game: 2, closed: 2, done: 3}[p] ?? 0;
-  const st = ['① 역할 토의', '② 지원하기', '③ 미니게임', '④ 결과'];
+  const idx = {setup: 0, apply: 1, game: 2, closed: 2, done: 3}[phase()] ?? 0;
+  const st = isSeat() ? ['① 원칙 토의', '② 구역 지원', '③ 미니게임', '④ 자리 배치'] : ['① 역할 토의', '② 지원하기', '③ 미니게임', '④ 결과'];
   return `<div class="steps">${st.map((s, i) => `<span class="${i === idx ? 'on' : i < idx ? 'done' : ''}">${s}</span>`).join('')}</div>`;
 }
 function modeBanner(){
-  return store.mode === 'local' ? `<div class="banner">🧪 <b>체험 모드</b>예요. 이 브라우저 안에서만 저장돼요. 다른 탭에서 <code>?mode=student</code> 주소로 열면 학생 화면을 함께 시험해 볼 수 있어요. 여러 태블릿에서 쓰려면 파일 위쪽의 <code>FIREBASE_CONFIG</code>를 채워 주세요.</div>` : '';
+  return store.mode === 'local' ? `<div class="banner">🧪 <b>체험 모드</b>예요. 이 브라우저 안에서만 저장돼요. 다른 탭에서 <code>?mode=student</code> 주소로 열면 학생 화면을 함께 시험해 볼 수 있어요.</div>` : '';
 }
 function linkPanel(){
   const l = studentLink();
   return `<section class="panel noprint"><h3>📲 학생 접속 주소</h3><div class="qr">
     <img width="150" height="150" alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(l)}" onerror="this.remove()">
-    <div><code>${esc(l)}</code><p class="hint">태블릿으로 QR을 찍거나 주소를 열고, 자기 이름을 누르면 돼요.</p></div></div></section>`;
+    <div><code>${esc(l)}</code><p class="hint">태블릿으로 QR을 찍거나 주소를 열고, 자기 이름을 누르면 돼요. 학생 화면은 선생님이 연 활동을 자동으로 따라가요.</p></div></div></section>`;
 }
 function resultBoard(){
-  const A = assigned(), rs = roles();
+  const A = S.assigned || {}, rs = roles();
   const times = [...TIMES, ...new Set(rs.map(r => r.time).filter(t => !TIMES.includes(t)))];
   return `<section class="panel"><h2>📋 우리 반 1인 1역</h2>${times.map(t => {
     const list = rs.filter(r => r.time === t); if (!list.length) return '';
@@ -401,8 +580,17 @@ function resultBoard(){
     }).join('')}`;
   }).join('')}</section>`;
 }
-function myRoleBox(r, title = '나의 역할'){
-  return `<div class="myrole"><div class="em">${esc(r.emoji)}</div><div class="hint">${title}</div><h2>${esc(r.name)}</h2>
+function zoneResult(){
+  const A = assigned();
+  return `<section class="panel"><h2>🪑 구역별 결과</h2>${zones().map(z => {
+    const ns = Object.keys(A).filter(s => A[s] === z.id).map(stuName);
+    return `<div class="rrow"><span class="zdot" style="background:${z.color}"></span><b>${esc(z.name)}</b><span class="rdesc">${z.slots}자리</span>
+      <span class="names">${ns.map(n => `<span class="nm">${esc(n)}</span>`).join('')}${'<span class="nm empty">빈자리</span>'.repeat(Math.max(0, z.slots - ns.length))}</span></div>`;
+  }).join('')}</section>`;
+}
+function myRoleBox(r, title){
+  if (isSeat()) return `<div class="myrole"><div class="em">🪑</div><div class="hint">${title || '나의 자리 구역'}</div><h2><span class="zdot" style="background:${r.color}"></span> ${esc(r.name)}</h2></div>`;
+  return `<div class="myrole"><div class="em">${esc(r.emoji)}</div><div class="hint">${title || '나의 역할'}</div><h2>${esc(r.name)}</h2>
     <div class="tag">🕘 ${esc(r.time)}</div>${r.desc ? `<p>🛠 ${esc(r.desc)}</p>` : ''}</div>`;
 }
 function cardHtml(rid, cid, c, g, who){
@@ -414,7 +602,7 @@ function cardHtml(rid, cid, c, g, who){
     <span class="inner"><span class="back">❓<small>${label}</small></span><span class="front">${c.win ? '🎉' : '🍀'}<small>${label}</small></span></span></button>`;
 }
 function gameBoard(rid, g, who){
-  const r = S.roles?.[rid] || {};
+  const r = itemOf(rid) || {};
   const cards = Object.entries(g.cards || {}).sort((a, b) => +a[0].slice(1) - +b[0].slice(1));
   const players = Object.keys(g.players || {});
   const taken = new Set(cards.map(([, c]) => c.by).filter(Boolean));
@@ -427,7 +615,9 @@ function gameBoard(rid, g, who){
       <button class="btn primary" onclick="act.reveal('${rid}')">✨ 결과 공개</button></div>` : ''}
   </section>`;
 }
+const likeCount = p => Object.keys(p.likes || {}).length;
 
+/* 역할 제안 */
 function proposalForm(){
   const d = ui.draft;
   return `<section class="panel"><h2>✍️ 필요한 역할 제안하기</h2>
@@ -440,53 +630,141 @@ function proposalForm(){
     <div class="center" style="margin-top:12px"><button class="btn big primary" onclick="act.propose()">📮 제안 보내기</button></div></section>`;
 }
 function proposalList(who){
-  const lc = p => Object.keys(p.likes || {}).length;
-  const ps = Object.entries(S.proposals || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => lc(b) - lc(a) || (a.at || 0) - (b.at || 0));
+  const ps = Object.entries(S.proposals || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
   if (!ps.length) return `<section class="panel center"><h2>💬 친구들의 역할 제안</h2><p class="hint">아직 제안이 없어요.${who === 'teacher' ? ' 학생 태블릿에서 제안을 받아 보세요.' : ' 첫 번째로 제안해 볼까요?'}</p></section>`;
   return `<section class="panel"><h2>💬 친구들의 역할 제안 (${ps.length})</h2><div class="grid">${ps.map(p => {
+    const path = 'proposals/' + p.id;
     const liked = p.likes?.[me.sid], mine = p.by === me.sid, adopted = p.adopted && S.roles?.[p.adopted];
     const btns = who === 'teacher'
-      ? `${adopted ? '<span class="tag">✅ 역할로 채택됨</span>' : `<button class="btn primary" onclick="act.adopt('${p.id}')">➕ 역할로 채택</button>`}<button class="btn" onclick="act.delProposal('${p.id}')">🗑</button>`
-      : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${p.id}')">👍 ${lc(p)}</button>${mine && !adopted ? `<button class="link" onclick="act.delProposal('${p.id}')">지우기</button>` : ''}${adopted ? '<span class="tag">✅ 채택됨</span>' : ''}`;
+      ? `${adopted ? '<span class="tag">✅ 역할로 채택됨</span>' : `<button class="btn primary" onclick="act.adopt('${p.id}')">➕ 역할로 채택</button>`}<button class="btn" onclick="act.delPost('${path}')">🗑</button>`
+      : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${path}')">👍 ${likeCount(p)}</button>${mine && !adopted ? `<button class="link" onclick="act.delPost('${path}')">지우기</button>` : ''}${adopted ? '<span class="tag">✅ 채택됨</span>' : ''}`;
     return `<div class="rcard prop ${adopted ? 'adopted' : ''}">
-      <div class="rtop"><div><div class="rn">${esc(p.name)}</div><div class="tag">🕘 ${esc(p.time)} · 👥 ${p.slots}명</div></div>${who === 'teacher' ? `<div class="count">👍${lc(p)}</div>` : ''}</div>
+      <div class="rtop"><div><div class="rn">${esc(p.name)}</div><div class="tag">🕘 ${esc(p.time)} · 👥 ${p.slots}명</div></div>${who === 'teacher' ? `<div class="count">👍${likeCount(p)}</div>` : ''}</div>
       ${p.desc ? `<div class="desc">🛠 ${esc(p.desc)}</div>` : ''}${p.reason ? `<div class="reason">💡 ${esc(p.reason)}</div>` : ''}
       <div class="by">제안: ${esc(stuName(p.by))}</div>
       <div class="row" style="margin-top:8px">${btns}</div></div>`;
   }).join('')}</div></section>`;
 }
 
+/* 자리 원칙 의견 */
+function ideaForm(){
+  return `<section class="panel"><h2>✍️ 자리 배치 의견 내기</h2>
+    <p class="hint">어떻게 자리를 정하면 모두가 공부하기 좋을까요? 예: “눈이 나쁜 친구는 앞자리 우선”, “한 달마다 바꾸기”</p>
+    <textarea class="inp" rows="2" maxlength="80" placeholder="자리 배치 원칙을 적어 주세요" oninput="ui.idea=this.value">${esc(ui.idea)}</textarea>
+    <div class="center" style="margin-top:10px"><button class="btn big primary" onclick="act.sendIdea()">📮 의견 보내기</button></div></section>`;
+}
+function ideaList(who){
+  const ps = Object.entries(S.seat?.ideas || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
+  if (!ps.length) return `<section class="panel center"><h2>💬 친구들의 자리 배치 의견</h2><p class="hint">아직 의견이 없어요.</p></section>`;
+  return `<section class="panel"><h2>💬 친구들의 자리 배치 의견 (${ps.length})</h2>${ps.map(p => {
+    const path = 'seat/ideas/' + p.id, liked = p.likes?.[me.sid], mine = p.by === me.sid;
+    const btns = who === 'teacher'
+      ? `<button class="btn ${p.adopted ? '' : 'primary'}" onclick="act.adoptIdea('${p.id}')">${p.adopted ? '채택 취소' : '📌 원칙으로 채택'}</button><button class="btn" onclick="act.delPost('${path}')">🗑</button>`
+      : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${path}')">👍 ${likeCount(p)}</button>${mine && !p.adopted ? `<button class="link" onclick="act.delPost('${path}')">지우기</button>` : ''}`;
+    return `<div class="idea ${p.adopted ? 'adopted' : ''}"><div class="itext">${p.adopted ? '📌 ' : ''}${esc(p.text)}<div class="by">${esc(stuName(p.by))}${who === 'teacher' ? ' · 👍 ' + likeCount(p) : ''}</div></div><div class="row">${btns}</div></div>`;
+  }).join('')}</section>`;
+}
+function principles(){
+  const ps = Object.values(S.seat?.ideas || {}).filter(p => p.adopted);
+  return ps.length ? `<section class="panel principles"><h3>📌 우리 반 자리 배치 원칙</h3><ol>${ps.map(p => `<li>${esc(p.text)}</li>`).join('')}</ol></section>` : '';
+}
+
+/* 교실 배치도 그리기: mode = edit | apply | view | final */
+function gridHtml(mode){
+  const L = layout(), Z = S.seat?.zones || {}, seats = S.seat?.seats || {};
+  const myPick = (S.seat?.picks || {})[me.sid] || (S.seat?.assigned || {})[me.sid];
+  let h = `<div class="classroom"><div class="desk">🧑‍🏫 교탁 · 칠판 (앞)</div><div class="sgrid" style="grid-template-columns:repeat(${L.cols},1fr)">`;
+  for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++){
+    const k = cellKey(r, c), z = L.cells?.[k], zone = z && Z[z];
+    if (!zone){ h += `<div class="cell aisle" ${mode === 'edit' ? `onclick="act.paint('${k}')"` : ''}>${mode === 'edit' ? '통로' : ''}</div>`; continue; }
+    const st = `style="background:${zone.color}"`;
+    if (mode === 'edit') h += `<div class="cell" ${st} onclick="act.paint('${k}')">${esc(zone.name)}</div>`;
+    else if (mode === 'apply') h += `<div class="cell drop ${myPick === z ? 'mine' : ''}" ${st} data-zone="${z}" onclick="${me.role === 'student' ? `act.pick('${z}')` : ''}">${esc(zone.name)}</div>`;
+    else if (mode === 'final'){
+      const sid = seats[k], teacher = me.role === 'teacher';
+      h += `<div class="cell seat ${sid === me.sid && !teacher ? 'mine' : ''} ${ui.swap === k && teacher ? 'swap' : ''}" ${st} ${teacher ? `onclick="act.tapSeat('${k}')"` : ''}>
+        <b>${sid ? esc(stuName(sid)) : ''}</b><small>${esc(zone.name)}</small></div>`;
+    }
+    else h += `<div class="cell" ${st}>${esc(zone.name)}</div>`;
+  }
+  return h + '</div></div>';
+}
+
 /* ---------------- 선생님 화면 ---------------- */
-function tSetup(){
-  const rs = roles(), st = students(), sum = totalSlots(), n = st.length;
-  const ok = n > 0 && rs.length > 0 && sum === n;
-  return `${proposalList('teacher')}<section class="panel">
-    <div class="row between"><h2>① 우리 반 역할 정리하기</h2><button class="btn" onclick="act.toggleBig()">${ui.bigView ? '✏️ 고치기' : '📺 크게 보기'}</button></div>
-    <p class="hint">학생 제안 중 토의로 정한 것을 ‘역할로 채택’하면 여기에 들어와요. 하는 일·추천 이유·시간·인원을 다듬고, 필요 없는 역할은 지워요.</p>
-    <div class="sum ${sum === n ? 'ok' : 'bad'}">인원 합계 <b>${sum}</b>자리 / 우리 반 <b>${n}</b>명 ${sum === n ? '✅ 딱 맞아요!' : sum < n ? `— ${n - sum}자리 더 필요해요` : `— ${sum - n}자리 줄여야 해요`}</div>
-    <div class="grid">${ui.bigView ? rs.map(r => roleCard(r)).join('') : rs.map(roleEditor).join('') + `<button class="addcard" onclick="act.addRole()">＋ 역할 추가</button>`}</div>
-    ${rs.length ? '' : `<div class="center"><button class="btn" onclick="act.loadExamples()">💡 예시 역할 불러오기</button></div>`}
-  </section>
+function tHub(){
+  const st = students(), n = st.length;
+  const label = (m, p) => ({setup: '토의 중', apply: '지원 중', game: '미니게임 중', closed: '다음 지원 준비', done: '완료 ✅'}[p || 'setup']);
+  const card = (m, em, title, desc, p) => `<button class="modcard" onclick="act.openMod('${m}')"><div class="em">${em}</div><h2>${title}</h2><p>${desc}</p>
+    <span class="tag">${label(m, p)}${S.active === m ? ' · 학생 화면에 열림' : ''}</span></button>`;
+  return `<div class="center"><div class="logo">🏗️</div><h1>교실 설계소</h1><p class="hint">우리 반의 역할과 자리를 함께 설계해요</p></div>
+  ${modeBanner()}
+  <div class="modgrid">${card('role', '🙋', '1인 1역 정하기', '필요한 역할을 제안하고, 지원하고, 함께 정해요', S.phase)}
+    ${card('seat', '🪑', '자리 배치 정하기', '자리 원칙을 토의하고, 원하는 구역에 지원해요', S.seat?.phase)}</div>
   <section class="panel"><h2>👧 우리 반 명단 (${n}명)</h2>
-    <p class="hint">한 줄에 한 명씩, 번호 순서대로 적고 저장해요.</p>
+    <p class="hint">한 줄에 한 명씩, 번호 순서대로 적고 저장해요. 두 활동이 같은 명단을 써요.</p>
     <textarea id="names" rows="6">${esc(st.map(s => s.name).join('\n'))}</textarea>
     <button class="btn" onclick="act.saveNames()">명단 저장</button></section>
   <section class="panel"><h2>⏱️ 지원 시간</h2>
     <div class="chips">${[60, 120, 180, 300].map(s => `<button class="chip ${dur() === s ? 'on' : ''}" onclick="act.setDur(${s})">${s / 60}분</button>`).join('')}</div></section>
   ${linkPanel()}
+  <div class="footer"><button class="btn" onclick="act.resetAll()">🔄 전체 초기화</button><button class="btn" onclick="act.logoutTeacher()">나가기</button></div>`;
+}
+function tSetup(){
+  const rs = roles(), n = students().length, sum = totalSlots();
+  const ok = n > 0 && rs.length > 0 && sum === n;
+  return `${proposalList('teacher')}<section class="panel">
+    <div class="row between"><h2>📝 우리 반 역할 정리하기</h2><button class="btn" onclick="act.toggleBig()">${ui.bigView ? '✏️ 고치기' : '📺 크게 보기'}</button></div>
+    <p class="hint">학생 제안 중 토의로 정한 것을 ‘역할로 채택’하면 여기에 들어와요. 하는 일·추천 이유·시간·인원을 다듬고, 필요 없는 역할은 지워요.</p>
+    <div class="sum ${sum === n ? 'ok' : 'bad'}">인원 합계 <b>${sum}</b>자리 / 우리 반 <b>${n}</b>명 ${sum === n ? '✅ 딱 맞아요!' : sum < n ? `— ${n - sum}자리 더 필요해요` : `— ${sum - n}자리 줄여야 해요`}</div>
+    <div class="grid">${ui.bigView ? rs.map(r => roleCard(r)).join('') : rs.map(roleEditor).join('') + `<button class="addcard" onclick="act.addRole()">＋ 역할 추가</button>`}</div>
+    ${rs.length ? '' : `<div class="center"><button class="btn" onclick="act.loadExamples()">💡 예시 역할 불러오기</button></div>`}
+  </section>
   <div class="bottombar"><button class="btn big primary" ${ok ? '' : 'disabled'} onclick="act.startRound()">🚀 1차 지원 시작</button>
     ${ok ? '' : '<div class="hint">역할 인원 합계와 학생 수가 같아야 시작할 수 있어요</div>'}</div>`;
 }
+function tSeatSetup(){
+  const L = layout(), zs = zones(), n = students().length, seats = totalSlots();
+  const ok = n > 0 && seats >= n;
+  const fixed = S.seat?.fixed || {}, apart = Object.entries(S.seat?.apart || {});
+  const zoneName = id => zs.find(z => z.id === id)?.name || '?';
+  return `${ideaList('teacher')}
+  <section class="panel"><h2>🗺 교실 배치도</h2>
+    <p class="hint">아래에서 구역을 고른 뒤 배치도 칸을 누르면 그 구역 자리가 돼요. ‘통로’로 칠하면 빈칸이 돼요. 학생들은 이 구역에 이름을 끌어다 놓아 지원해요.</p>
+    <div class="row"><b>가로</b><div class="stepper"><button onclick="act.resize('cols',-1)">−</button><b>${L.cols}칸</b><button onclick="act.resize('cols',1)">＋</button></div>
+      <b style="margin-left:14px">세로</b><div class="stepper"><button onclick="act.resize('rows',-1)">−</button><b>${L.rows}줄</b><button onclick="act.resize('rows',1)">＋</button></div></div>
+    <label>칠할 구역 고르기</label>
+    <div class="zonelist">${zs.map(z => `<div class="zitem ${ui.paint === z.id ? 'on' : ''}" onclick="act.setPaint('${z.id}')">
+        <span class="zdot" style="background:${z.color}"></span><input value="${esc(z.name)}" onclick="event.stopPropagation()" onchange="act.renameZone('${z.id}',this.value)">
+        <span class="hint">${z.slots}자리</span><button class="x" onclick="event.stopPropagation();act.delZone('${z.id}')">✕</button></div>`).join('')}
+      <div class="zitem ${ui.paint === 'aisle' ? 'on' : ''}" onclick="act.setPaint('aisle')"><span class="zdot aislec"></span>통로(빈칸)</div>
+      <button class="btn" onclick="act.addZone()">＋ 구역 추가</button></div>
+    ${gridHtml('edit')}
+    <div class="sum ${seats >= n ? 'ok' : 'bad'}">자리 <b>${seats}</b>개 / 우리 반 <b>${n}</b>명 ${seats >= n ? `✅ ${seats - n ? '빈자리 ' + (seats - n) + '개' : '딱 맞아요!'}` : `— ${n - seats}자리 더 필요해요`}</div>
+  </section>
+  <section class="panel noprint"><h2>🔒 선생님만 보는 설정</h2>
+    <p class="hint">학생 화면에는 보이지 않아요. 친구 이름을 눌러 고른 뒤 아래 버튼을 눌러요.</p>
+    <div class="names">${students().map(s => `<button class="chip ${ui.sel.includes(s.id) ? 'on' : ''}" onclick="act.selStu('${s.id}')">${esc(s.name)}</button>`).join('')}</div>
+    <label>📌 구역 미리 정하기 (친구 1명 고르기) — 예: 눈이 나쁜 친구는 앞줄</label>
+    <div class="chips">${zs.map(z => `<button class="chip" ${ui.sel.length === 1 ? '' : 'disabled'} onclick="act.fix('${z.id}')"><span class="zdot" style="background:${z.color}"></span> ${esc(z.name)}에 고정</button>`).join('')}</div>
+    <div class="names">${Object.entries(fixed).map(([sid, z]) => `<span class="nm">${esc(stuName(sid))} → ${esc(zoneName(z))} <button class="x" onclick="act.unfix('${sid}')">✕</button></span>`).join('')}</div>
+    <label>↔️ 떨어뜨려 앉히기 (친구 2명 고르기) — 최종 자리에서 서로 붙지 않게 배치해요</label>
+    <button class="btn" ${ui.sel.length === 2 ? '' : 'disabled'} onclick="act.addApart()">↔️ 두 친구 떨어뜨리기</button>
+    <div class="names">${apart.map(([id, p]) => `<span class="nm">${esc(stuName(p.a))} ↔ ${esc(stuName(p.b))} <button class="x" onclick="act.delApart('${id}')">✕</button></span>`).join('')}</div>
+  </section>
+  <div class="bottombar"><button class="btn big primary" ${ok ? '' : 'disabled'} onclick="act.startRound()">🚀 1차 구역 지원 시작</button>
+    ${ok ? '' : '<div class="hint">자리 수가 학생 수보다 많거나 같아야 시작할 수 있어요</div>'}</div>`;
+}
 function tApply(){
-  const picks = S.picks || {}, un = unassigned();
-  const open = roles().filter(r => rem(r.id) > 0);
-  const notPicked = un.filter(s => !picks[s.id] || !S.roles?.[picks[s.id]]);
-  return `<section class="panel center"><h2>${S.round}차 지원 중!</h2>${timerHtml()}
+  const picks = D().picks || {}, un = unassigned();
+  const open = items().filter(r => rem(r.id) > 0);
+  const notPicked = un.filter(s => !picks[s.id] || !itemOf(picks[s.id]));
+  return `<section class="panel center"><h2>${D().round}차 ${isSeat() ? '구역 ' : ''}지원 중!</h2>${timerHtml()}
     <div class="row center"><button class="btn" onclick="act.addTime(30)">+30초</button><button class="btn danger" onclick="act.closeRound()">지금 마감</button></div></section>
+  ${isSeat() ? principles() + gridHtml('apply') : ''}
   <div class="grid">${open.map(r => {
     const ap = un.filter(s => picks[s.id] === r.id), R = rem(r.id);
     const cls = ap.length > R ? 'over' : ap.length === R ? 'full' : '';
-    return `<div class="rcard ${cls}"><div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div><div class="tag">🕘 ${esc(r.time)}</div></div>
+    return `<div class="rcard ${cls}" ${isSeat() ? `style="border-left:12px solid ${r.color}"` : ''}><div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div>${r.time ? `<div class="tag">🕘 ${esc(r.time)}</div>` : ''}</div>
       <div class="count">${ap.length}<small>/${R}</small></div></div>
       <div class="names">${ap.map(s => `<span class="nm">${esc(s.name)}</span>`).join('') || '<span class="hint">아직 없어요</span>'}</div>
       ${ap.length > R ? '<div class="warn">🎲 마감되면 미니게임!</div>' : ''}</div>`;
@@ -495,76 +773,108 @@ function tApply(){
     <div class="names">${notPicked.map(s => `<span class="nm gray">${esc(s.name)}</span>`).join('') || '<span class="hint">모두 골랐어요!</span>'}</div></section>`;
 }
 function tGame(){
-  const gs = Object.entries(S.games || {});
+  const gs = Object.entries(D().games || {});
   const allRev = gs.every(([, g]) => g.revealed);
   return `<section class="panel center"><h2>🎲 미니게임: 행운의 카드 뽑기</h2>
-    <p class="hint">자리보다 지원자가 많은 역할이에요. 지원한 친구들이 자기 태블릿에서 카드를 한 장씩 골라요.<br>🎉 카드를 뽑은 친구가 그 역할을 맡고, 🍀 카드를 뽑은 친구는 다음 지원에서 다시 골라요.</p>
+    <p class="hint">자리보다 지원자가 많은 ${WORD()}이에요. 지원한 친구들이 자기 태블릿에서 카드를 한 장씩 골라요.<br>🎉 카드를 뽑은 친구가 그 ${WORD()}에 들어가고, 🍀 카드를 뽑은 친구는 다음 지원에서 다시 골라요.</p>
     ${allRev ? `<button class="btn big primary" onclick="act.afterGames()">다음으로 ▶</button>` : `<button class="btn big" onclick="act.revealAll()">✨ 모두 공개</button>`}</section>
   ${gs.map(([rid, g]) => gameBoard(rid, g, 'teacher')).join('')}`;
 }
 function tClosed(){
-  const un = unassigned(), open = roles().filter(r => rem(r.id) > 0);
-  return `<section class="panel center"><h2>${S.round}차 지원 결과</h2>
-    <p>배정 완료 <b>${students().length - un.length}</b>명 · 아직 역할이 없는 친구 <b>${un.length}</b>명</p>
+  const un = unassigned(), open = items().filter(r => rem(r.id) > 0), round = D().round || 1;
+  return `<section class="panel center"><h2>${round}차 지원 결과</h2>
+    <p>배정 완료 <b>${students().length - un.length}</b>명 · 아직 정해지지 않은 친구 <b>${un.length}</b>명</p>
     <div class="names center">${un.map(s => `<span class="nm">${esc(s.name)}</span>`).join('')}</div>
     <h3>남은 자리</h3><div class="names center">${open.map(r => `<span class="nm gray">${esc(r.emoji)} ${esc(r.name)} ${rem(r.id)}자리</span>`).join('')}</div>
-    <div class="row center" style="margin-top:14px"><button class="btn big primary" ${open.length ? '' : 'disabled'} onclick="act.startRound()">🚀 ${S.round + 1}차 지원 시작</button>
+    <div class="row center" style="margin-top:14px"><button class="btn big primary" ${open.length ? '' : 'disabled'} onclick="act.startRound()">🚀 ${round + 1}차 지원 시작</button>
       <button class="btn" onclick="act.randomRest()">🎲 남은 친구 무작위 배정</button></div></section>
-  ${resultBoard()}`;
+  ${isSeat() ? zoneResult() : resultBoard()}`;
 }
 function tDone(){
-  return `<section class="panel center"><h2>🎊 1인 1역이 모두 정해졌어요!</h2>
+  if (!isSeat()) return `<section class="panel center"><h2>🎊 1인 1역이 모두 정해졌어요!</h2>
     <div class="row center noprint"><button class="btn primary" onclick="act.print()">🖨 인쇄하기</button><button class="btn" onclick="act.backToSetup()">↩ 처음부터 다시 정하기</button></div></section>
   ${resultBoard()}`;
+  const placed = S.seat?.seats;
+  return `<section class="panel center"><h2>🎊 구역이 모두 정해졌어요!</h2>
+    ${placed ? `<p class="hint noprint">두 자리를 차례로 누르면 서로 바꿀 수 있어요.</p>` : `<p>이제 구역 안에서 자리를 정해요. ‘떨어뜨려 앉히기’ 설정도 함께 반영돼요.</p>`}
+    <div class="row center noprint"><button class="btn big primary" onclick="act.placeSeats()">🎲 ${placed ? '다시 섞기' : '자리 배치하기'}</button>
+      ${placed ? `<button class="btn" onclick="act.print()">🖨 인쇄하기</button>` : ''}</div></section>
+  ${placed ? `<section class="panel">${principles()}${gridHtml('final')}</section>` : zoneResult()}`;
 }
 function teacherView(){
   if (loaded && !S.students && !initDone){ initDone = true; store.update(defaultsMap()); }
-  const p = S.phase || 'setup';
-  const body = {setup: tSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSetup;
-  return `<div class="thead noprint"><b>🧑‍🏫 선생님 화면 · ${esc(ROOM)}</b>${stepper()}</div>${modeBanner()}${body()}
-    <div class="footer">${p !== 'setup' ? `<button class="btn" onclick="act.backToSetup()">↩ 역할 토의로 돌아가기</button>` : ''}
-      <button class="btn" onclick="act.resetAll()">🔄 전체 초기화</button><button class="btn" onclick="act.logoutTeacher()">나가기</button></div>`;
+  if (!ui.mod) return tHub();
+  const p = phase();
+  const body = isSeat()
+    ? ({setup: tSeatSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSeatSetup)
+    : ({setup: tSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSetup);
+  return `<div class="thead noprint"><button class="btn" onclick="act.hub()">🏗️ 설계소 홈</button><b>${isSeat() ? '🪑 자리 배치 정하기' : '🙋 1인 1역 정하기'}</b>${stepper()}</div>
+    ${modeBanner()}${body()}
+    <div class="footer">${p !== 'setup' ? `<button class="btn" onclick="act.backToSetup()">↩ 토의 단계로 돌아가기</button>` : ''}</div>`;
 }
 
 /* ---------------- 학생 화면 ---------------- */
 function sPickName(){
   const st = students();
   if (!st.length) return `<div class="home"><div class="logo">⏳</div><h2>선생님이 준비하고 있어요</h2></div>`;
-  return `<section class="panel center"><h2>🙋 내 이름을 눌러 주세요</h2>
+  return `<div class="center"><h1>🏗️ 교실 설계소</h1></div><section class="panel center"><h2>🙋 내 이름을 눌러 주세요</h2>
     <div class="namegrid">${st.map(s => `<button class="btn" onclick="act.chooseMe('${s.id}')">${s.no}. ${esc(s.name)}</button>`).join('')}</div></section>`;
+}
+function sApplyRole(){
+  const picks = D().picks || {}, un = unassigned(), myPick = picks[me.sid];
+  const expired = store.now() > (D().endsAt || 0);
+  const open = items().filter(r => rem(r.id) > 0);
+  return `<section class="panel center"><h2>${D().round}차 지원</h2>${timerHtml()}
+    <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '하고 싶은 역할을 눌러 지원하세요. 마감 전까지는 바꿀 수 있어요.'}</p></section>
+    <div class="grid">${open.map(r => {
+      const cnt = un.filter(s => picks[s.id] === r.id).length, R = rem(r.id), mine = myPick === r.id;
+      const extra = `<div class="applybar">지원 ${cnt}명 / ${R}자리 ${mine ? '<span class="mine">✅ 내가 지원했어요</span>' : ''}</div>`;
+      return roleCard({...r, slots: R}, extra, (mine ? 'picked ' : '') + (expired ? '' : 'tap'), expired ? '' : `act.pick('${r.id}')`);
+    }).join('')}</div>`;
+}
+function sApplySeat(){
+  const picks = D().picks || {}, un = unassigned(), myPick = picks[me.sid];
+  const expired = store.now() > (D().endsAt || 0);
+  const myZone = zones().find(z => z.id === myPick);
+  return `<section class="panel center"><h2>${D().round}차 구역 지원</h2>${timerHtml()}
+    <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '👇 내 이름표를 앉고 싶은 구역으로 <b>끌어다 놓으세요</b>. 마감 전까지는 옮길 수 있어요.'}</p>
+    </section>
+    ${expired ? '' : `<div class="dragzone"><span class="namechip" onpointerdown="startDrag(event)">✋ ${esc(stuName(me.sid))}</span>
+      ${myZone ? `<span class="mine-msg">✅ <b>${esc(myZone.name)}</b>에 지원했어요</span>` : ''}</div>`}
+    ${expired && myZone ? `<p class="mine-msg center">✅ <b>${esc(myZone.name)}</b>에 지원했어요</p>` : ''}
+    ${gridHtml('apply')}
+    ${principles()}
+    <div class="grid">${zones().filter(z => rem(z.id) > 0).map(z => {
+      const cnt = un.filter(s => picks[s.id] === z.id).length, R = rem(z.id);
+      return `<div class="rcard ${myPick === z.id ? 'picked' : ''}" data-zone="${z.id}" style="border-left:12px solid ${z.color}">
+        <div class="rn">${esc(z.name)}</div><div class="applybar">지원 ${cnt}명 / ${R}자리</div></div>`;
+    }).join('')}</div>`;
 }
 function studentView(){
   if (!loaded) return `<div class="home"><div class="logo">⏳</div><h2>연결하는 중…</h2></div>`;
   if (!me.sid || !S.students?.[me.sid]) return sPickName();
   const head = `<div class="me">👋 <b>${esc(stuName(me.sid))}</b> <button class="link" onclick="act.forgetMe()">내가 아니에요</button></div>`;
-  const p = S.phase || 'setup';
-  const mr = S.roles?.[assigned()[me.sid]];
+  if (!S.active) return head + `<div class="home"><div class="logo">🏗️</div><h2>교실 설계소</h2><p>선생님이 활동을 고르고 있어요. 잠시 기다려요!</p></div>`;
+  const p = phase();
+  const mr = itemOf(assigned()[me.sid]);
+  const title = `<div class="center"><h2>${isSeat() ? '🪑 자리 배치 정하기' : '🙋 1인 1역 정하기'}</h2></div>`;
   let body = '';
   if (p === 'setup'){
-    body = proposalForm() + proposalList('student') +
-      `<section class="panel"><h2>📌 지금까지 정해진 역할 (${roles().length})</h2><div class="grid">${roles().map(r => roleCard(r)).join('') || '<span class="hint">아직 없어요</span>'}</div></section>`;
+    body = isSeat()
+      ? ideaForm() + ideaList('student') + principles() + `<section class="panel"><h2>🗺 우리 교실 배치도</h2>${gridHtml('view')}</section>`
+      : proposalForm() + proposalList('student') +
+        `<section class="panel"><h2>📌 지금까지 정해진 역할 (${roles().length})</h2><div class="grid">${roles().map(r => roleCard(r)).join('') || '<span class="hint">아직 없어요</span>'}</div></section>`;
   } else if (p === 'apply'){
-    if (mr) body = myRoleBox(mr, '이미 정해진 나의 역할') + `<p class="center hint">친구들이 지원하고 있어요. 잠시 기다려요!</p>`;
-    else {
-      const picks = S.picks || {}, un = unassigned(), myPick = picks[me.sid];
-      const expired = store.now() > (S.endsAt || 0);
-      const open = roles().filter(r => rem(r.id) > 0);
-      body = `<section class="panel center"><h2>${S.round}차 지원</h2>${timerHtml()}
-        <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '하고 싶은 역할을 눌러 지원하세요. 마감 전까지는 바꿀 수 있어요.'}</p></section>
-        <div class="grid">${open.map(r => {
-          const cnt = un.filter(s => picks[s.id] === r.id).length, R = rem(r.id), mine = myPick === r.id;
-          const extra = `<div class="applybar">지원 ${cnt}명 / ${R}자리 ${mine ? '<span class="mine">✅ 내가 지원했어요</span>' : ''}</div>`;
-          return roleCard({...r, slots: R}, extra, (mine ? 'picked ' : '') + (expired ? '' : 'tap'), expired ? '' : `act.pick('${r.id}')`);
-        }).join('')}</div>`;
-    }
+    if (mr) body = myRoleBox(mr, isSeat() ? '이미 정해진 나의 구역' : '이미 정해진 나의 역할') + `<p class="center hint">친구들이 지원하고 있어요. 잠시 기다려요!</p>`;
+    else body = isSeat() ? sApplySeat() : sApplyRole();
   } else if (p === 'game'){
-    const gs = Object.entries(S.games || {});
+    const gs = Object.entries(D().games || {});
     const myGame = gs.find(([, g]) => g.players?.[me.sid]);
     if (myGame){
       const [rid, g] = myGame;
       const myCard = Object.values(g.cards || {}).find(c => c.by === me.sid);
       let msg = myCard ? '카드를 골랐어요! 선생님이 결과를 공개할 때까지 기다려요 🤞' : '🃏 카드를 한 장 골라 주세요!';
-      if (g.revealed) msg = myCard?.win ? `🎉 축하해요! <b>${esc(S.roles[rid].name)}</b> 역할을 맡게 됐어요!` : '🍀 아쉽지만 다음 지원에서 다른 역할을 골라 봐요!';
+      if (g.revealed) msg = myCard?.win ? `🎉 축하해요! <b>${esc(itemOf(rid)?.name)}</b>에 들어가게 됐어요!` : `🍀 아쉽지만 다음 지원에서 다른 ${WORD()}을 골라 봐요!`;
       body = `<div class="result-msg">${msg}</div>${gameBoard(rid, g, 'student')}`;
     } else {
       body = (mr ? myRoleBox(mr) : '') + `<section class="panel center"><h2>🎲 친구들이 미니게임 중이에요</h2></section>` +
@@ -572,23 +882,26 @@ function studentView(){
     }
   } else if (p === 'closed'){
     body = mr ? myRoleBox(mr) + `<p class="center hint">남은 친구들의 다음 지원을 기다려요.</p>`
-      : `<section class="panel center"><h2>🙌 다음 지원을 준비하고 있어요</h2><p>남은 역할 중에서 하고 싶은 것을 미리 골라 둬요!</p></section>
-         <div class="grid">${roles().filter(r => rem(r.id) > 0).map(r => roleCard({...r, slots: rem(r.id)})).join('')}</div>`;
+      : `<section class="panel center"><h2>🙌 다음 지원을 준비하고 있어요</h2><p>남은 ${WORD()} 중에서 어디로 갈지 미리 생각해 둬요!</p></section>
+         ${isSeat() ? gridHtml('view') : ''}<div class="grid">${items().filter(r => rem(r.id) > 0).map(r => roleCard({...r, slots: rem(r.id)})).join('')}</div>`;
   } else if (p === 'done'){
-    body = (mr ? myRoleBox(mr) : '') + resultBoard();
+    if (isSeat()) body = S.seat?.seats ? `<section class="panel center"><h2>🎊 우리 반 자리 배치</h2><p class="hint">노란 테두리가 내 자리예요</p></section>${principles()}${gridHtml('final')}`
+      : (mr ? myRoleBox(mr) : '') + `<section class="panel center"><p>선생님이 구역 안에서 자리를 정하고 있어요 🪑</p></section>`;
+    else body = (mr ? myRoleBox(mr) : '') + resultBoard();
   }
-  return head + stepper() + body;
+  return head + title + stepper() + body;
 }
 
 /* ---------------- 그리기 ---------------- */
 function home(){
-  return `<div class="home"><div class="logo">🙋</div><h1>우리 반 1인 1역</h1><p>역할을 토의하고, 지원하고, 함께 정해요!</p>
+  return `<div class="home"><div class="logo">🏗️</div><h1>교실 설계소</h1><p>우리 반의 역할과 자리를 함께 설계해요!</p>
     <button class="btn big primary" onclick="act.asStudent()">🧒 학생으로 들어가기</button>
     <button class="btn big" onclick="act.asTeacher()">🧑‍🏫 선생님</button>${modeBanner()}</div>`;
 }
 function render(){
   const a = document.activeElement;
   if (a && a.closest && a.closest('#app') && /^(INPUT|TEXTAREA)$/.test(a.tagName)){ pending = true; return; }
+  MOD = me.role === 'teacher' ? (ui.mod || 'role') : (S.active || 'role');
   const y = window.scrollY;
   document.getElementById('app').innerHTML = me.role === 'teacher' ? teacherView() : me.role === 'student' ? studentView() : home();
   window.scrollTo(0, y);
@@ -598,9 +911,10 @@ document.addEventListener('focusout', () => { if (pending){ pending = false; set
 
 let lastExpired = null;
 function tick(){
-  if (S.phase !== 'apply') return;
-  const left = Math.max(0, (S.endsAt || 0) - store.now());
-  const total = (S.duration || dur()) * 1000;
+  if (me.role === 'teacher' && !ui.mod) return;
+  if (phase() !== 'apply') return;
+  const left = Math.max(0, (D().endsAt || 0) - store.now());
+  const total = (D().duration || dur()) * 1000;
   document.querySelectorAll('[data-timer]').forEach(el => {
     const s = Math.ceil(left / 1000);
     el.querySelector('.tnum').textContent = left > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '마감!';
@@ -609,7 +923,7 @@ function tick(){
   });
   if (left <= 0){
     if (me.role === 'teacher') act.closeRound();
-    else if (lastExpired !== S.round + ':' + S.endsAt){ lastExpired = S.round + ':' + S.endsAt; render(); }
+    else if (lastExpired !== MOD + D().round + ':' + D().endsAt){ lastExpired = MOD + D().round + ':' + D().endsAt; render(); }
   }
 }
 setInterval(tick, 250);
