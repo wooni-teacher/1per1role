@@ -1,1872 +1,558 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>1인 1역 프로그램</title>
-<link rel="stylesheet" as="style" crossorigin
-  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>우리 반 1인 1역 정하기</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
-  :root{
-    --primary-1:#4F46E5; --primary-2:#7C3AED;      /* 브랜드(로그인/공용 버튼) */
-    --admin-1:#14B8A6;   --admin-2:#0F766E;         /* 관리자 테마(teal) */
-    --student-1:#FB923C; --student-2:#F59E0B;       /* 학생 테마(amber) */
-    --success-1:#22C55E; --success-2:#16A34A;
-    --warning-1:#FBBF24; --warning-2:#F59E0B;
-    --danger-1:#F87171;  --danger-2:#DC2626;
-    --ink:#1F2430; --muted:#8A93A6;
-    --bg:#F6F7FB; --line:#E7EAF2;
-    --radius-lg:18px; --radius-md:14px; --radius-sm:10px;
-    --shadow-card:0 4px 18px rgba(31,36,48,.06);
-    --shadow-pop:0 20px 50px rgba(31,36,48,.18);
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Segoe UI',sans-serif; background: var(--bg); min-height: 100vh; color:var(--ink); }
-
-  /* ── 로그인 ── */
-  #loginScreen {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh;
-    background: radial-gradient(circle at 30% 20%, #6D5BF0 0%, var(--primary-1) 45%, var(--primary-2) 100%);
-  }
-  .login-box {
-    background: white; border-radius: 24px; padding: 44px 40px;
-    box-shadow: var(--shadow-pop); width: 380px; text-align: center;
-  }
-  .login-box h1 { font-size: 1.7rem; color: var(--ink); margin-bottom: 8px; font-weight:800; }
-  .login-box p  { color: var(--muted); margin-bottom: 30px; font-size: 0.9rem; }
-  .login-btn {
-    width: 100%; padding: 15px; border: none; border-radius: var(--radius-sm);
-    font-size: 1rem; font-weight:700; cursor: pointer; margin-bottom: 12px; transition: all .2s;
-  }
-  .btn-student { background: linear-gradient(135deg,var(--student-1),var(--student-2)); color:#fff; }
-  .btn-admin   { background: linear-gradient(135deg,var(--admin-1),var(--admin-2)); color:#fff; }
-  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(31,36,48,.18); }
-  .login-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-
-  .firebase-status {
-    display:flex; align-items:center; gap:8px; justify-content:center;
-    font-size:.85rem; padding:8px 12px; border-radius:8px; margin-bottom:18px;
-  }
-  .status-dot { width:10px; height:10px; border-radius:50%; }
-  .s-connected    { background:#e8f5e9; color:#4CAF50; }
-  .s-disconnected { background:#fce4ec; color:#f44336; }
-  .s-connecting   { background:#fff3e0; color:#ff9800; }
-  .dot-connected  { background:#4CAF50; }
-  .dot-disconnected { background:#f44336; }
-  .dot-connecting { background:#ff9800; animation:pulse 1s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-  /* ── 공통 화면 ── */
-  .screen { display:none; }
-  .screen.active { display:block; }
-
-  /* ── 헤더 ── */
-  .admin-header {
-    background: linear-gradient(135deg,var(--admin-1),var(--admin-2));
-    color:white; padding:20px 28px;
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-  }
-  .student-header {
-    background: linear-gradient(135deg,var(--student-1),var(--student-2));
-    color:white; padding:20px 28px;
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
-  }
-  .header-title h1 { font-size:1.4rem; }
-  .header-title p  { font-size:.8rem; opacity:.85; margin-top:2px; }
-  .header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .back-btn {
-    background:rgba(255,255,255,.2); border:none; color:white;
-    padding:8px 16px; border-radius:8px; cursor:pointer; font-size:.85rem;
-  }
-  .live-badge {
-    display:flex; align-items:center; gap:6px;
-    background:rgba(255,255,255,.2); padding:6px 12px; border-radius:20px; font-size:.8rem;
-  }
-  .live-dot { width:8px; height:8px; border-radius:50%; background:#00ff88; animation:pulse 1s infinite; }
-
-  /* ── 연결 상태 바 ── */
-  .conn-bar { padding:6px; font-size:.8rem; text-align:center; display:none; }
-  .conn-bar.offline { display:block; background:#fce4ec; color:#f44336; }
-  .conn-bar.online  { display:block; background:#e8f5e9; color:#4CAF50; }
-
-  /* ── 컨텐츠 래퍼 ── */
-  .admin-content   { padding:28px; max-width:1400px; margin:0 auto; }
-  .student-content { padding:28px; max-width:900px;  margin:0 auto; }
-
-  /* ── 카드 ── */
-  .card {
-    background:white; border-radius:var(--radius-lg); padding:24px;
-    box-shadow:var(--shadow-card); margin-bottom:20px; border:1px solid var(--line);
-  }
-  .card h2 {
-    font-size:1.08rem; color:var(--ink); margin-bottom:18px; font-weight:800;
-    border-bottom:2px solid var(--bg); padding-bottom:10px;
-  }
-
-  /* ── 통계 ── */
-  .stats-grid {
-    display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:14px; margin-bottom:22px;
-  }
-  .stat-card {
-    background:white; border-radius:var(--radius-md); padding:18px; text-align:center;
-    box-shadow:var(--shadow-card); border:1px solid var(--line);
-  }
-  .stat-number { font-size:1.9rem; font-weight:800; color:var(--admin-2); }
-  .stat-label  { font-size:.78rem; color:var(--muted); margin-top:4px; }
-
-  /* ── 탭 ── */
-  .tabs { display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap; }
-  .tab-btn {
-    padding:10px 18px; border:none; border-radius:999px; cursor:pointer;
-    font-size:.88rem; font-weight:600; background:white; color:var(--muted); transition:all .2s;
-    box-shadow:0 2px 8px rgba(31,36,48,.07); border:1px solid var(--line);
-  }
-  .tab-btn.active { background:linear-gradient(135deg,var(--admin-1),var(--admin-2)); color:white; border-color:transparent; }
-  .tab-content { display:none; }
-  .tab-content.active { display:block; }
-
-  /* ── 역할 카드 그리드 ── */
-  .status-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px; }
-  .role-card {
-    border:2px solid var(--line); border-radius:var(--radius-md); padding:14px;
-    transition:all .3s; position:relative; overflow:hidden;
-  }
-  .role-card::before {
-    content:''; position:absolute; top:0; left:0; width:4px; height:100%;
-    background:var(--line); transition:background .3s;
-  }
-  .role-card.has-assigned::before  { background:var(--success-1); }
-  .role-card.has-applicants::before{ background:#3B82F6; }
-  .role-card.full-applied::before  { background:var(--warning-2); }
-  .role-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
-  .role-name  { font-weight:700; color:var(--ink); font-size:.92rem; }
-  .role-badge { font-size:.73rem; padding:3px 8px; border-radius:20px; background:var(--bg); color:var(--muted); }
-  .role-time  { font-size:.78rem; color:var(--muted); margin-bottom:7px; }
-  .applicants { display:flex; flex-wrap:wrap; gap:5px; }
-  .applicant-tag { font-size:.78rem; padding:3px 8px; border-radius:15px; background:#EFF6FF; color:#2563EB; }
-  .assigned-tag  { font-size:.78rem; padding:3px 8px; border-radius:15px; background:#ECFDF5; color:var(--success-2); font-weight:600; }
-  .no-applicant  { font-size:.78rem; color:#ccc; }
-
-  /* ── 월별 테이블 ── */
-  .month-table { width:100%; border-collapse:collapse; font-size:.84rem; }
-  .month-table th {
-    background:linear-gradient(135deg,var(--admin-1),var(--admin-2));
-    color:white; padding:11px; text-align:center;
-  }
-  .month-table td { padding:9px 10px; border-bottom:1px solid var(--bg); text-align:center; }
-  .month-table tr:hover td { background:#fafafa; }
-  .month-select { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
-  .month-btn {
-    padding:7px 15px; border:2px solid var(--line); border-radius:8px;
-    cursor:pointer; background:white; font-size:.84rem; transition:all .2s;
-  }
-  .month-btn.active { border-color:var(--admin-1); background:#F0FDFA; color:var(--admin-2); font-weight:700; }
-
-  /* ── 버튼 ── */
-  .action-btn {
-    padding:10px 18px; border:none; border-radius:var(--radius-sm); cursor:pointer;
-    font-size:.88rem; font-weight:600; transition:all .2s; margin:4px;
-  }
-  .btn-primary { background:linear-gradient(135deg,var(--primary-1),var(--primary-2)); color:white; }
-  .btn-success { background:linear-gradient(135deg,var(--success-1),var(--success-2)); color:white; }
-  .btn-warning { background:linear-gradient(135deg,var(--warning-1),var(--warning-2)); color:white; }
-  .btn-danger  { background:linear-gradient(135deg,var(--danger-1),var(--danger-2)); color:white; }
-  .action-btn:hover    { transform:translateY(-2px); box-shadow:0 8px 18px rgba(31,36,48,.16); }
-  .action-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-
-  /* ── 학생 이름 그리드 ── */
-  .student-grid {
-    display:grid; grid-template-columns:repeat(5,1fr);
-    gap:10px; max-width:500px; margin:0 auto 20px;
-  }
-  .student-name-btn {
-    padding:10px; border:2px solid var(--line); border-radius:var(--radius-sm);
-    cursor:pointer; background:white; font-size:.84rem; transition:all .2s; text-align:center;
-  }
-  .student-name-btn:hover    { border-color:var(--student-1); background:#FFF7ED; }
-  .student-name-btn.selected { border-color:var(--student-1); background:linear-gradient(135deg,var(--student-1),var(--student-2)); color:white; }
-
-  /* ── 역할 선택 카드 ── */
-  .roles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
-  .role-select-card {
-    border:2px solid var(--line); border-radius:var(--radius-md); padding:14px;
-    cursor:pointer; transition:all .2s; background:white; text-align:center;
-  }
-  .role-select-card:hover:not(.disabled):not(.r-assigned) { border-color:var(--student-1); transform:translateY(-2px); }
-  .role-select-card.r-selected  { border-color:var(--student-1); background:linear-gradient(135deg,#FFF7ED,#FFFBEB); }
-  .role-select-card.r-full      { border-color:var(--warning-1); background:#FFFBEB; }
-  .role-select-card.r-assigned  { border-color:var(--success-1); background:#ECFDF5; cursor:default; }
-  .role-select-card.disabled    { opacity:.5; cursor:not-allowed; }
-  .r-icon  { font-size:1.7rem; margin-bottom:7px; }
-  .r-title { font-weight:700; font-size:.88rem; color:var(--ink); }
-  .r-time  { font-size:.73rem; color:var(--muted); margin-top:3px; }
-  .r-count { font-size:.73rem; color:#aaa; margin-top:3px; }
-
-  /* ── 가위바위보 / 뽑기 모달 ── */
-  .modal-overlay {
-    display:none; position:fixed; inset:0;
-    background:rgba(15,23,42,.55); z-index:1000;
-    align-items:center; justify-content:center; padding:16px;
-  }
-  .modal-overlay.active { display:flex; }
-  .modal {
-    background:white; border-radius:22px; padding:36px; max-width:520px; width:92%;
-    text-align:center; box-shadow:var(--shadow-pop);
-    max-height:90vh; overflow-y:auto;
-  }
-  .modal h2 { font-size:1.4rem; color:var(--ink); margin-bottom:8px; font-weight:800; }
-  .modal > p { color:var(--muted); margin-bottom:18px; }
-  .rps-buttons { display:flex; gap:14px; justify-content:center; margin-bottom:18px; }
-  .rps-btn {
-    width:78px; height:78px; border:3px solid var(--line); border-radius:var(--radius-md);
-    font-size:2.4rem; cursor:pointer; background:white; transition:all .2s;
-  }
-  .rps-btn:hover    { border-color:var(--primary-1); transform:scale(1.1); }
-  .rps-btn.selected { border-color:var(--primary-1); background:#EEF2FF; }
-  .rps-result { font-size:1.05rem; font-weight:700; padding:14px; border-radius:var(--radius-sm); margin-bottom:14px; }
-  .rps-win  { background:#ECFDF5; color:var(--success-2); }
-  .rps-draw { background:#FFFBEB; color:#D97706; }
-  .participants-list { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-bottom:18px; }
-  .p-chip         { padding:5px 11px; border-radius:20px; font-size:.83rem; background:var(--bg); color:#555; }
-  .p-chip.current { background:var(--primary-1); color:white; }
-  .p-chip.done    { background:#ECFDF5; color:var(--success-2); }
-
-  /* ── 선발 방식 선택 ── */
-  .method-choice { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:6px; }
-  .method-card {
-    flex:1; min-width:180px; border:2px solid var(--line); border-radius:var(--radius-md);
-    padding:20px 16px; cursor:pointer; background:white; transition:all .2s; text-align:center;
-  }
-  .method-card:hover { border-color:var(--primary-1); transform:translateY(-3px); box-shadow:var(--shadow-card); }
-  .method-card .m-icon { font-size:2rem; margin-bottom:8px; }
-  .method-card .m-title { font-weight:700; color:var(--ink); font-size:.95rem; margin-bottom:4px; }
-  .method-card .m-desc { font-size:.76rem; color:var(--muted); line-height:1.4; }
-
-  /* ── 뽑기(룰렛) ── */
-  .lottery-reel {
-    background:linear-gradient(135deg,#EEF2FF,#F5F3FF); border-radius:var(--radius-md);
-    padding:28px 16px; margin-bottom:16px; font-size:1.5rem; font-weight:800; color:var(--primary-2);
-    min-height:64px; display:flex; align-items:center; justify-content:center;
-    border:2px dashed #C7D2FE;
-  }
-  .lottery-reel.spinning { animation:reelPulse .15s linear infinite; }
-  @keyframes reelPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.04);} }
-  .lottery-winners { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:16px; }
-  .lottery-winner-chip {
-    padding:8px 14px; border-radius:999px; background:linear-gradient(135deg,var(--success-1),var(--success-2));
-    color:white; font-weight:700; font-size:.88rem;
-  }
-
-  /* ── 편집 모달 ── */
-  .edit-select {
-    width:100%; padding:10px; border:2px solid var(--line); border-radius:8px;
-    font-size:.93rem; margin-bottom:14px;
-  }
-  .modal-btns { display:flex; gap:10px; justify-content:center; }
-
-  /* ── 실시간 로그 패널 ── */
-  .rt-panel {
-    position:fixed; right:18px; top:75px; width:270px;
-    background:white; border-radius:var(--radius-md); box-shadow:var(--shadow-pop);
-    z-index:500; max-height:78vh; overflow-y:auto;
-    transition:transform .3s; border:1px solid var(--line);
-  }
-  .rt-panel.hidden { transform:translateX(310px); }
-  .rt-panel-hd {
-    background:linear-gradient(135deg,var(--primary-1),var(--primary-2));
-    color:white; padding:11px 14px; border-radius:13px 13px 0 0;
-    display:flex; justify-content:space-between; align-items:center;
-    position:sticky; top:0;
-  }
-  .rt-panel-hd h3 { font-size:.88rem; }
-  .rt-close { background:none; border:none; color:white; cursor:pointer; font-size:.95rem; }
-  .rt-item {
-    padding:9px 14px; border-bottom:1px solid var(--bg);
-    font-size:.78rem; display:flex; align-items:flex-start; gap:7px;
-  }
-  .rt-item:last-child { border-bottom:none; }
-  .rt-time { color:#aaa; font-size:.73rem; white-space:nowrap; }
-  .rt-msg  { color:#555; flex:1; }
-
-  /* ── 로딩 오버레이 ── */
-  .loading-overlay {
-    position:fixed; inset:0; background:rgba(255,255,255,.9);
-    z-index:2000; display:none;
-    flex-direction:column; align-items:center; justify-content:center;
-  }
-  .loading-overlay.show { display:flex; }
-  .spinner {
-    width:48px; height:48px; border:5px solid var(--bg);
-    border-top-color:var(--primary-1); border-radius:50%;
-    animation:spin .8s linear infinite; margin-bottom:14px;
-  }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .loading-text { color:var(--primary-1); font-size:.95rem; font-weight:600; }
-
-  /* ── 토스트 ── */
-  .toast {
-    position:fixed; bottom:28px; right:28px; background:#1F2430; color:white;
-    padding:12px 18px; border-radius:var(--radius-sm); font-size:.88rem;
-    transform:translateY(100px); transition:transform .3s; z-index:9999;
-    box-shadow:var(--shadow-pop);
-  }
-  .toast.show { transform:translateY(0); }
-
-  /* ── 내 역할 배너 ── */
-  .my-role-banner {
-    background:linear-gradient(135deg,var(--student-1),var(--student-2));
-    color:white; border-radius:var(--radius-lg); padding:20px 24px;
-    margin-bottom:22px; display:flex; align-items:center; gap:15px;
-  }
-  .my-role-banner .icon { font-size:2.4rem; }
-
-  /* ── 배정 뱃지 ── */
-  .assigned-month-badge {
-    display:inline-block; padding:2px 7px; border-radius:10px;
-    font-size:.73rem; background:#ECFDF5; color:var(--success-2); margin:2px;
-  }
-  .waiting-badge {
-    display:inline-block; padding:2px 9px; border-radius:20px;
-    background:#FFFBEB; color:#D97706; font-size:.73rem; font-weight:600;
-  }
-
-  /* ── 반응형 ── */
-  @media(max-width:768px){
-    .student-grid { grid-template-columns:repeat(3,1fr); }
-    .roles-grid   { grid-template-columns:repeat(2,1fr); }
-    .admin-content,.student-content { padding:14px; }
-    .rt-panel { display:none; }
-  }
-  @media(max-width:480px){
-    .rps-btn { width:64px; height:64px; font-size:2rem; }
-    .method-choice { flex-direction:column; }
-  }
-
-  /* ── 운영 단계/경쟁 UI ── */
-  .phase-banner{
-    margin:18px 0 0; padding:16px 18px; border-radius:16px;
-    background:linear-gradient(135deg,#fff7e6,#fff1cc); border:1px solid #ffe0a3;
-  }
-  .phase-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
-  .phase-pill{display:inline-block;padding:6px 12px;border-radius:999px;font-size:.8rem;font-weight:700;background:#fff;color:#8a5a00;border:1px solid #ffd27a;}
-  .phase-timer{font-size:1.05rem;font-weight:800;color:#d35400;}
-  .phase-help{margin-top:8px;font-size:.88rem;color:#7a6a52;line-height:1.5;}
-  .competition-card{
-    margin-top:16px; background:#f8fbff; border:1px solid #dcecff; border-radius:16px; padding:16px;
-  }
-  .competition-card h3{margin:0 0 8px 0; color:#245; font-size:1rem;}
-  .competition-participants{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px;}
-  .competition-chip{padding:6px 10px;border-radius:999px;background:#eef6ff;font-size:.82rem;color:#356;}
-  .hand-grid{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 8px;}
-  .hand-btn{
-    border:none; border-radius:14px; padding:12px 16px; cursor:pointer; font-size:1rem; font-weight:700;
-    background:linear-gradient(135deg,var(--primary-1),var(--primary-2)); color:white;
-  }
-  .hand-btn.selected{outline:3px solid #cfd8ff;}
-  .mini-note{font-size:.8rem;color:#6c7a89;}
-  .admin-session-box{
-    margin-bottom:16px; padding:16px; border-radius:16px; background:#f8faff; border:1px solid #dce7ff;
-  }
-  .admin-session-box .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-  .admin-session-box .meta{display:flex;gap:12px;flex-wrap:wrap;font-size:.86rem;color:#556;}
-
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;background:#fff8ec;color:#2b2b3a;-webkit-tap-highlight-color:transparent}
+#app{max-width:1100px;margin:0 auto;padding:16px 16px 100px}
+h1,h2,h3{margin:.3em 0}
+.btn{font:inherit;font-weight:700;border:none;border-radius:14px;padding:12px 18px;background:#fff;box-shadow:0 3px 0 #e3d6bf;cursor:pointer;min-height:48px;margin:4px;color:#2b2b3a}
+.btn.primary{background:#ff8a3d;color:#fff;box-shadow:0 4px 0 #d9661c}
+.btn.danger{background:#ff5a6a;color:#fff;box-shadow:0 4px 0 #c93a48}
+.btn.big{font-size:1.2rem;padding:16px 28px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:active{transform:translateY(2px)}
+.panel{background:#fff;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 4px 14px rgba(120,90,40,.08)}
+.center{text-align:center}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row.center{justify-content:center}.between{justify-content:space-between}
+.hint{color:#8a8070;font-size:.95rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.rcard{background:#fff;border-radius:18px;padding:16px;border:3px solid #f1e6d2;box-shadow:0 4px 0 #f1e6d2;transition:.15s}
+.rcard.tap{cursor:pointer}.rcard.tap:active{transform:scale(.98)}
+.rcard.picked{border-color:#ff8a3d;background:#fff3e8;box-shadow:0 4px 0 #ff8a3d}
+.rcard.full{border-color:#5cc98b}.rcard.over{border-color:#ff5a6a;background:#fff2f3}
+.rtop{display:flex;gap:10px;align-items:center}
+.em{font-size:2.2rem;line-height:1}
+.rn{font-size:1.25rem;font-weight:800}
+.tag{display:inline-block;background:#f5efe3;border-radius:999px;padding:2px 10px;font-size:.85rem;margin-top:3px}
+.desc,.reason{margin-top:8px;line-height:1.45}
+.reason{background:#fffbe0;border-radius:10px;padding:8px}
+.applybar{margin-top:10px;font-weight:800;color:#6b5f4b}
+.applybar .mine{color:#d9661c}
+.count{margin-left:auto;font-size:2rem;font-weight:900}.count small{font-size:1rem;color:#999}
+.names{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.names.center{justify-content:center}
+.nm{background:#e9f3ff;border-radius:999px;padding:4px 12px;font-weight:700}.nm.gray{background:#f1f1f1}.nm.empty{background:none;border:2px dashed #ddd;color:#bbb}
+.warn{margin-top:8px;color:#e03b4b;font-weight:800}
+.sum{font-size:1.1rem;padding:10px 14px;border-radius:12px;margin:8px 0}.sum.ok{background:#e6f8ee}.sum.bad{background:#ffeef0}
+.rcard.edit input,.rcard.edit textarea,textarea#names{width:100%;font:inherit;border:2px solid #eee;border-radius:10px;padding:8px}
+.rcard.edit input.emoji{width:58px;text-align:center;font-size:1.6rem;padding:4px}
+.rcard.edit input.rname{flex:1;width:auto;font-weight:800;font-size:1.1rem}
+label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{font:inherit;border:2px solid #eadfcb;background:#fff;border-radius:999px;padding:6px 12px;cursor:pointer;color:#2b2b3a}.chip.on{background:#ff8a3d;border-color:#ff8a3d;color:#fff;font-weight:700}.chips.sm .chip{font-size:.85rem;padding:4px 10px}
+.stepper{display:flex;align-items:center;gap:12px}.stepper button{width:44px;height:44px;border-radius:12px;border:none;background:#f5efe3;font-size:1.4rem;cursor:pointer}
+.x{border:none;background:none;font-size:1.3rem;cursor:pointer}
+.addcard{border:3px dashed #e3d6bf;border-radius:18px;background:none;font:inherit;font-size:1.2rem;color:#b5a78e;min-height:150px;cursor:pointer}
+.bottombar{position:sticky;bottom:10px;text-align:center}
+.timer .tnum{font-size:3.5rem;font-weight:900}.timer .tbar{height:14px;background:#f1e6d2;border-radius:999px;overflow:hidden;max-width:500px;margin:0 auto}.timer .tbar i{display:block;height:100%;width:100%;background:#5cc98b;transition:width .25s linear}.timer.hurry .tnum{color:#e03b4b}.timer.hurry .tbar i{background:#ff5a6a}
+.steps{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.steps span{padding:6px 12px;border-radius:999px;background:#f1e6d2;color:#9a8c74;font-weight:700;font-size:.9rem}.steps span.on{background:#ff8a3d;color:#fff}.steps span.done{background:#ffd9bd;color:#b45a1e}
+.cards{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:12px 0}
+.pcard{width:110px;height:150px;perspective:600px;border:none;background:none;padding:0;cursor:pointer;font:inherit}
+.pcard:disabled{cursor:default;opacity:1}
+.pcard .inner{position:relative;display:block;width:100%;height:100%;transition:transform .7s;transform-style:preserve-3d}
+.pcard.flip .inner{transform:rotateY(180deg)}
+.pcard .back,.pcard .front{position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:2.6rem;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pcard .back{background:linear-gradient(135deg,#7b6cff,#4fb3ff);color:#fff;box-shadow:0 5px 0 #4b3fc4}
+.pcard.taken .back{background:linear-gradient(135deg,#b9b3e6,#a9cdee);box-shadow:0 5px 0 #8f88c9}
+.pcard.mine .back{outline:4px solid #ff8a3d}
+.pcard .front{transform:rotateY(180deg);background:#f2f2f2;color:#888}
+.pcard.win .front{background:#fff0b3;color:#b07a00;box-shadow:0 0 0 4px #ffc93d}
+.pcard small{font-size:.9rem;font-weight:800;margin-top:6px}
+.myrole{background:linear-gradient(135deg,#fff3e0,#ffe6f0);border-radius:24px;padding:22px;text-align:center;margin:14px 0}.myrole .em{font-size:4rem}
+.result-msg{font-size:1.3rem;font-weight:800;text-align:center;margin:10px 0}
+.home{text-align:center;padding-top:6vh}.home .logo{font-size:5rem}.home .btn{display:block;width:min(360px,90%);margin:12px auto}
+.banner{background:#eef6ff;border-radius:12px;padding:10px 14px;font-size:.9rem;margin:12px auto;max-width:640px;text-align:left;line-height:1.5}
+.namegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.namegrid .btn{font-size:1.15rem;min-height:64px;margin:0}
+.me{display:flex;align-items:center;gap:8px;justify-content:flex-end}.link{border:none;background:none;color:#8a8070;text-decoration:underline;font:inherit;cursor:pointer}
+.time{margin-top:18px;color:#d9661c}
+.rrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border-bottom:1px dashed #eee}.rrow .em{font-size:1.6rem}.rrow .rdesc{color:#8a8070;font-size:.9rem;flex:1;min-width:140px}.rrow .names{margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2b3a;color:#fff;padding:12px 20px;border-radius:999px;z-index:9;font-weight:700}
+.qr{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.qr code{background:#f5efe3;padding:6px 10px;border-radius:8px;word-break:break-all}
+.thead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.footer{text-align:center;margin-top:30px}
+@media print{.btn,.steps,.footer,.me,.banner,.noprint{display:none!important}body{background:#fff}.panel{box-shadow:none}}
 </style>
 </head>
 <body>
-
-<!-- 로딩 오버레이 -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <div class="loading-text" id="loadingText">Firebase 연결 중...</div>
-</div>
-
-<!-- 연결 상태 바 -->
-<div class="conn-bar" id="connBar"></div>
-
-<!-- ══════════════ 로그인 화면 ══════════════ -->
-<div id="loginScreen">
-  <div class="login-box">
-    <div style="font-size:3rem;margin-bottom:14px;">🏫</div>
-    <h1>1인 1역 프로그램</h1>
-    <p>역할을 선택하고 한 달간 책임감 있게 활동해요!</p>
-
-    <div class="firebase-status s-connecting" id="fbStatus">
-      <div class="status-dot dot-connecting" id="statusDot"></div>
-      <span id="statusText">Firebase 연결 중...</span>
-    </div>
-
-    <button class="login-btn btn-student" id="btnStudent" onclick="goTo('student')" disabled>🎒 학생 화면</button>
-    <button class="login-btn btn-admin"   id="btnAdmin"   onclick="goTo('admin')"   disabled>👩‍🏫 관리자 대시보드</button>
-  </div>
-</div>
-
-<!-- ══════════════ 학생 화면 ══════════════ -->
-<div id="studentScreen" class="screen">
-  <div class="student-header">
-    <div class="header-title">
-      <h1>🎒 1인 1역 신청</h1>
-      <p id="studentMonthLabel"></p>
-    </div>
-    <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div>실시간 연동</div>
-      <select id="studentMonthSelect"
-        style="padding:8px 12px;border-radius:8px;border:none;font-size:.88rem;"
-        onchange="onStudentMonthChange()">
-        <option value="6">6월</option><option value="7">7월</option>
-        <option value="9">9월</option><option value="10">10월</option>
-        <option value="11">11월</option><option value="12">12월</option>
-        <option value="1">1월</option>
-      </select>
-      <button class="back-btn" onclick="goTo('login')">← 나가기</button>
-    </div>
-  </div>
-
-  <div class="student-content">
-    <div class="card" style="padding:18px 24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-        <span style="font-weight:600;color:#333;font-size:.92rem;">배정 현황</span>
-        <span id="progressLabel" style="font-size:.83rem;color:#888;"></span>
-      </div>
-      <div class="progress-bar-wrap" style="background:#f0f4f8;border-radius:10px;height:11px;overflow:hidden;">
-        <div id="progressBar" style="height:100%;background:linear-gradient(135deg,#FB923C,#F59E0B);border-radius:10px;transition:width .5s;width:0%"></div>
-      </div>
-    </div>
-
-    <div id="studentPhaseArea"></div>
-    <div id="studentCompetitionArea"></div>
-
-    <div class="card" id="studentSelectCard">
-      <h2>👤 내 이름을 선택하세요</h2>
-      <div class="student-grid" id="studentGrid"></div>
-    </div>
-
-    <div id="myRoleBanner"></div>
-
-    <div class="card" id="roleSelectionArea" style="display:none;">
-      <h2 id="roleSelectionTitle"></h2>
-      <p id="roleSelectionDesc" style="color:#888;font-size:.88rem;margin-bottom:18px;"></p>
-      <div class="roles-grid" id="rolesGrid"></div>
-      <div style="margin-top:18px;text-align:center;" id="submitArea"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════ 관리자 화면 ══════════════ -->
-<div id="adminScreen" class="screen">
-  <div class="admin-header">
-    <div class="header-title">
-      <h1>👩‍🏫 관리자 대시보드</h1>
-      <p>1인 1역 프로그램 관리</p>
-    </div>
-    <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div>실시간 연동 중</div>
-      <button class="back-btn" onclick="toggleRtPanel()">📡 실시간 로그</button>
-      <button class="back-btn" onclick="goTo('login')">← 나가기</button>
-    </div>
-  </div>
-
-  <div class="admin-content">
-    <div class="stats-grid" id="statsGrid"></div>
-
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('overview',this)">📊 신청 현황</button>
-      <button class="tab-btn"        onclick="switchTab('monthly',this)">📅 월별 배정표</button>
-      <button class="tab-btn"        onclick="switchTab('students',this)">👥 학생별 현황</button>
-      <button class="tab-btn"        onclick="switchTab('manage',this)">⚙️ 배정 관리</button>
-      <button class="tab-btn"        onclick="switchTab('roles',this)">🛠️ 역할 관리</button>
-    </div>
-
-    <div class="tab-content active" id="tab-overview">
-      <div class="card">
-        <div class="admin-session-box" id="adminSessionBox"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
-          <h2 style="margin:0;border:none;padding:0;">역할별 신청 현황</h2>
-          <div>
-            <select id="adminMonthSelect"
-              style="padding:8px 12px;border-radius:8px;border:2px solid #e8ecf0;font-size:.88rem;margin-right:6px;"
-              onchange="renderOverview()">
-              <option value="6">6월</option><option value="7">7월</option>
-              <option value="9">9월</option><option value="10">10월</option>
-              <option value="11">11월</option><option value="12">12월</option>
-              <option value="1">1월</option>
-            </select>
-            <button class="action-btn btn-warning" onclick="autoAssignRandom()">🎲 미배정 랜덤 배정</button>
-            <button class="action-btn btn-success" onclick="assignAll()">✅ 신청자 자동 확정</button>
-          </div>
-        </div>
-        <div class="status-grid" id="overviewGrid"></div>
-      </div>
-    </div>
-
-    <div class="tab-content" id="tab-monthly">
-      <div class="card">
-        <h2>📅 월별 역할 배정표</h2>
-        <div class="month-select" id="monthSelectBtns"></div>
-        <div id="monthlyTable"></div>
-        <div style="margin-top:18px;text-align:center;">
-          <button class="action-btn btn-success" onclick="downloadCSV()">📥 CSV 다운로드</button>
-          <button class="action-btn btn-primary" onclick="downloadAllMonths()">📦 전체 월 다운로드</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tab-content" id="tab-students">
-      <div class="card">
-        <h2>👥 학생별 역할 현황</h2>
-        <div id="studentStatusGrid" style="overflow-x:auto;"></div>
-      </div>
-    </div>
-
-    <div class="tab-content" id="tab-manage">
-      <div class="card">
-        <h2>⚙️ 배정 직접 수정</h2>
-        <p style="color:#888;font-size:.88rem;margin-bottom:18px;">특정 월의 역할 배정을 직접 수정할 수 있습니다.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
-          <select id="manageMonthSelect"
-            style="padding:9px;border-radius:8px;border:2px solid #e8ecf0;font-size:.88rem;"
-            onchange="renderManageTable()">
-            <option value="6">6월</option><option value="7">7월</option>
-            <option value="9">9월</option><option value="10">10월</option>
-            <option value="11">11월</option><option value="12">12월</option>
-            <option value="1">1월</option>
-          </select>
-          <button class="action-btn btn-danger"  onclick="resetMonth()">🗑️ 이 달 초기화</button>
-          <button class="action-btn btn-warning" onclick="resetAllData()">⚠️ 전체 초기화</button>
-        </div>
-        <div id="manageTable"></div>
-      </div>
-    </div>
-
-    <div class="tab-content" id="tab-roles">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-          <h2 style="margin:0;border:none;padding:0;">🛠️ 역할 관리</h2>
-          <button class="action-btn btn-primary" onclick="openRoleForm(null)">➕ 새 역할 추가</button>
-        </div>
-        <p style="color:#888;font-size:.86rem;margin-bottom:16px;line-height:1.6;">
-          학생들과 논의한 내용을 바탕으로 역할을 자유롭게 추가·수정·삭제할 수 있어요.
-          🔒 고정된 역할은 실수로 삭제되지 않도록 보호되며, 잠금을 해제해야 삭제할 수 있어요.
-          역할을 삭제하거나 인원을 줄이면 해당 역할의 기존 배정은 자동으로 해제되고 알림이 표시됩니다.
-        </p>
-        <div id="rolesManageList"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 실시간 로그 패널 -->
-<div class="rt-panel hidden" id="rtPanel">
-  <div class="rt-panel-hd">
-    <h3>📡 실시간 활동 로그</h3>
-    <button class="rt-close" onclick="toggleRtPanel()">✕</button>
-  </div>
-  <div id="rtLog">
-    <div class="rt-item"><span class="rt-msg" style="color:#aaa;">활동 로그가 여기에 표시됩니다.</span></div>
-  </div>
-</div>
-
-<!-- 가위바위보 모달 -->
-<div class="modal-overlay" id="rpsModal">
-  <div class="modal">
-    <div style="font-size:2rem;margin-bottom:8px;">✊✌️🖐️</div>
-    <h2>가위바위보!</h2>
-    <p id="rpsDesc"></p>
-    <div class="participants-list" id="rpsParticipants"></div>
-    <div id="rpsContent"></div>
-  </div>
-</div>
-
-<!-- 선발 방식 선택 모달 -->
-<div class="modal-overlay" id="methodModal">
-  <div class="modal">
-    <div style="font-size:2rem;margin-bottom:8px;">🎯</div>
-    <h2>선발 방식 선택</h2>
-    <p id="methodDesc"></p>
-    <div class="method-choice">
-      <div class="method-card" onclick="chooseMethodRps()">
-        <div class="m-icon">✊✌️🖐️</div>
-        <div class="m-title">가위바위보</div>
-        <div class="m-desc">학생들이 직접 손모양을 내며 승부를 겨뤄요.</div>
-      </div>
-      <div class="method-card" onclick="chooseMethodLottery()">
-        <div class="m-icon">🎰</div>
-        <div class="m-title">랜덤 뽑기</div>
-        <div class="m-desc">한 번의 클릭으로 공정하게 즉시 선발해요. 실수나 다툼 없이 빠르게 끝나요!</div>
-      </div>
-    </div>
-    <button class="action-btn" style="background:#e8ecf0;color:#666;margin-top:8px;" onclick="closeMethodModal()">닫기</button>
-  </div>
-</div>
-
-<!-- 랜덤 뽑기(룰렛) 모달 -->
-<div class="modal-overlay" id="lotteryModal">
-  <div class="modal">
-    <div style="font-size:2rem;margin-bottom:8px;">🎰</div>
-    <h2>랜덤 뽑기</h2>
-    <p id="lotteryDesc"></p>
-    <div class="participants-list" id="lotteryParticipants"></div>
-    <div class="lottery-reel" id="lotteryReel">뽑기를 시작하세요!</div>
-    <div class="lottery-winners" id="lotteryWinners"></div>
-    <div id="lotteryActions">
-      <button class="action-btn btn-primary" id="lotteryStartBtn" onclick="startLotteryDraw()">🎰 뽑기 시작</button>
-      <button class="action-btn" style="background:#e8ecf0;color:#666;" onclick="closeLotteryModal()">닫기</button>
-    </div>
-  </div>
-</div>
-
-<!-- 편집 모달 -->
-<div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <h2>✏️ 배정 수정</h2>
-    <p id="editDesc" style="margin-bottom:14px;color:#666;"></p>
-    <select class="edit-select" id="editSelect"></select>
-    <div class="modal-btns">
-      <button class="action-btn btn-primary" onclick="saveEdit()">저장</button>
-      <button class="action-btn" style="background:#e8ecf0;color:#666;" onclick="closeEditModal()">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- 역할 추가/수정 모달 -->
-<div class="modal-overlay" id="roleFormModal">
-  <div class="modal">
-    <h2 id="roleFormTitle">➕ 새 역할 추가</h2>
-    <div style="text-align:left;display:flex;flex-direction:column;gap:12px;margin-bottom:6px;">
-      <div>
-        <label style="font-size:.82rem;color:#666;font-weight:600;">아이콘 (이모지)</label>
-        <input type="text" id="roleFormIcon" class="edit-select" placeholder="예: 🧹" maxlength="4" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label style="font-size:.82rem;color:#666;font-weight:600;">역할 이름</label>
-        <input type="text" id="roleFormName" class="edit-select" placeholder="예: 칠판 지우기" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label style="font-size:.82rem;color:#666;font-weight:600;">활동 시간</label>
-        <input type="text" id="roleFormTime" class="edit-select" placeholder="예: 수시 / 방과후 / 아침활동" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label style="font-size:.82rem;color:#666;font-weight:600;">필요 인원</label>
-        <input type="number" id="roleFormCount" class="edit-select" min="1" max="10" value="1" style="margin-bottom:0;">
-      </div>
-    </div>
-    <div class="modal-btns" style="margin-top:14px;">
-      <button class="action-btn btn-primary" onclick="saveRoleForm()">저장</button>
-      <button class="action-btn" style="background:#e8ecf0;color:#666;" onclick="closeRoleFormModal()">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- 토스트 -->
-<div class="toast" id="toast"></div>
-
-<!-- ══════════════ Firebase + 앱 로직 ══════════════ -->
-<script type="module">
-import { initializeApp }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import {
-  getDatabase, ref, set, get, onValue, remove, push
-} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-
-/* ─── Firebase 설정 ─── */
-const firebaseConfig = {
-  apiKey:            "AIzaSyD-a2gTWcPZnrGeURBJi9aWa2_Jxgan8ek",
-  authDomain:        "per1roll.firebaseapp.com",
-  databaseURL:       "https://per1roll-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "per1roll",
-  storageBucket:     "per1roll.firebasestorage.app",
+<div id="app"></div>
+<script>
+/* =========================================================
+   ⚙️ 설정 — 여러 태블릿에서 쓰려면 Firebase 설정을 채워 주세요.
+   비워 두면 '체험 모드'(이 브라우저 안에서만 저장)로 동작해요.
+   ========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD-a2gTWcPZnrGeURBJi9aWa2_Jxgan8ek",
+  authDomain: "per1roll.firebaseapp.com",
+  databaseURL: "https://per1roll-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "per1roll",
+  storageBucket: "per1roll.firebasestorage.app",
   messagingSenderId: "972221913990",
-  appId:             "1:972221913990:web:2d87875585321320adaa07"
+  appId: "1:972221913990:web:2d87875585321320adaa07"
+};
+const TEACHER_PIN = "1234";          // 선생님 화면 비밀번호
+const TIMES = ['아침 시간','쉬는 시간','점심 시간','수업 시간','하교 전'];
+
+const DEFAULT_ROLES = [
+  ['🦎','히로 돌보미','히로 먹이·물 챙기고 사육장 온도 확인하기','히로가 건강하려면 매일 같은 시간에 돌봐 줄 친구가 꼭 필요해요.','아침 시간',2],
+  ['🧽','칠판 지킴이','수업이 끝나면 칠판 깨끗하게 지우기','다음 수업을 깨끗한 칠판에서 바로 시작할 수 있어요.','쉬는 시간',1],
+  ['♻️','분리수거 대장','종이·플라스틱·캔을 나누어 버리기','쓰레기를 잘 나누면 교실도 깨끗하고 지구도 지킬 수 있어요.','하교 전',2],
+  ['💡','전기 지킴이','빈 교실 전등 끄고 창문 닫기','전기를 아끼고, 비바람이 들어오지 않게 막아 줘요.','하교 전',1],
+  ['🌱','식물 친구','교실 화분에 물 주기','식물은 스스로 물을 마실 수 없어서 우리가 챙겨야 해요.','아침 시간',1],
+  ['📮','우편 배달부','가정통신문·학습지 나누어 주기','선생님과 친구들이 기다리지 않고 빠르게 받을 수 있어요.','아침 시간',1],
+  ['🍚','급식 도우미','급식 줄 정리하고 잔반 정리 돕기','점심시간이 질서 있고 안전해져요.','점심 시간',2],
+  ['📚','학급문고 사서','책꽂이의 책을 가지런히 정리하기','읽고 싶은 책을 쉽게 찾을 수 있어요.','쉬는 시간',1],
+  ['🧹','바닥 청소 요정','교실 바닥 쓸고 의자 밀어 넣기','먼지가 없어야 우리가 건강하게 지낼 수 있어요.','하교 전',2],
+  ['👟','신발장 정리왕','신발장 신발을 가지런히 정리하기','신발이 섞이거나 잃어버리지 않아요.','하교 전',1],
+  ['📱','태블릿 관리자','태블릿 개수 확인하고 충전기 꽂기','다음 시간에 모두가 충전된 태블릿을 쓸 수 있어요.','수업 시간',1]
+];
+const DEFAULT_NAMES = ['김다온','김도영','김채화','백수민','소진호','신은비','유준선','윤하늘',
+  '이보현','이지은','임규원','임휘재','장문혁','장준혁','한승우'];
+
+/* ---------------- 저장소 (Firebase 또는 체험 모드) ---------------- */
+const params = new URLSearchParams(location.search);
+const ROOM = (params.get('room') || 'banwol').replace(/[.#$\[\]\/\s]/g,'') || 'banwol';
+const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
+
+function makeFirebaseStore(){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+  const root = db.ref('oneRoleV2/' + ROOM);
+  let offset = 0;
+  db.ref('.info/serverTimeOffset').on('value', s => offset = s.val() || 0);
+  return {
+    mode: 'firebase',
+    now: () => Date.now() + offset,
+    subscribe(cb){ root.on('value', s => cb(s.val() || {})); },
+    update(map){ return root.update(map); },
+    set(path, val){ return root.child(path).set(val); },
+    claim(path, val){ return root.child(path).transaction(cur => cur ? undefined : val).then(r => r.committed); }
+  };
+}
+function makeLocalStore(){
+  const KEY = 'oneRole_' + ROOM;
+  let mem = {}; const subs = [];
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return clone(mem); } };
+  const write = o => { mem = o; try { localStorage.setItem(KEY, JSON.stringify(o)); } catch(e){} subs.forEach(cb => cb(clone(o))); };
+  window.addEventListener('storage', e => { if (e.key === KEY){ const o = read(); subs.forEach(cb => cb(o)); } });
+  const setPath = (o, path, val) => {
+    const p = path.split('/'); let c = o;
+    for (let i = 0; i < p.length - 1; i++){ if (typeof c[p[i]] !== 'object' || c[p[i]] === null) c[p[i]] = {}; c = c[p[i]]; }
+    const last = p[p.length - 1];
+    if (val === null || val === undefined) delete c[last]; else c[last] = clone(val);
+  };
+  const getPath = (o, path) => path.split('/').reduce((c, k) => c == null ? undefined : c[k], o);
+  return {
+    mode: 'local',
+    now: () => Date.now(),
+    subscribe(cb){ subs.push(cb); cb(read()); },
+    update(map){ const o = read(); for (const k in map) setPath(o, k, map[k]); write(o); return Promise.resolve(); },
+    set(path, val){ return this.update({[path]: val}); },
+    claim(path, val){ const o = read(); if (getPath(o, path)) return Promise.resolve(false); setPath(o, path, val); write(o); return Promise.resolve(true); }
+  };
+}
+let store;
+try { store = (window.firebase && FIREBASE_CONFIG.apiKey) ? makeFirebaseStore() : makeLocalStore(); }
+catch(e){ console.error(e); store = makeLocalStore(); }
+
+/* ---------------- 상태 ---------------- */
+let S = {}, loaded = false, closing = false, initDone = false, pending = false;
+const ui = { bigView: false };
+const me = { role: null, sid: null };
+try {
+  if (params.get('mode') === 'student') me.role = 'student';
+  if (sessionStorage.getItem('oneRole_t_' + ROOM) === '1' && params.get('mode') !== 'student') me.role = 'teacher';
+  me.sid = localStorage.getItem('oneRole_sid_' + ROOM);
+} catch(e){}
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const roles = () => Object.entries(S.roles || {}).map(([id, r]) => ({id, ...r})).sort((a, b) => (a.order || 0) - (b.order || 0));
+const students = () => Object.entries(S.students || {}).map(([id, s]) => ({id, ...s})).sort((a, b) => a.no - b.no);
+const assigned = () => S.assigned || {};
+const stuName = id => S.students?.[id]?.name || '?';
+const rem = rid => (+S.roles?.[rid]?.slots || 0) - Object.values(assigned()).filter(x => x === rid).length;
+const unassigned = () => students().filter(s => !assigned()[s.id]);
+const totalSlots = () => roles().reduce((a, r) => a + (+r.slots || 0), 0);
+const dur = () => S.settings?.duration || 180;
+const studentLink = () => location.origin + location.pathname + '?room=' + encodeURIComponent(ROOM) + '&mode=student';
+
+function toast(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+
+function defaultsMap(){
+  const up = {};
+  DEFAULT_ROLES.forEach((d, i) => {
+    up['roles/r' + String(i + 1).padStart(2, '0')] = {emoji: d[0], name: d[1], desc: d[2], reason: d[3], time: d[4], slots: d[5], order: i};
+  });
+  DEFAULT_NAMES.forEach((n, i) => up['students/s' + String(i + 1).padStart(2, '0')] = {no: i + 1, name: n});
+  up.phase = 'setup'; up['settings/duration'] = 180;
+  return up;
+}
+
+/* ---------------- 동작 ---------------- */
+const act = {
+  asStudent(){ me.role = 'student'; render(); },
+  asTeacher(){
+    const pin = prompt('선생님 비밀번호를 입력하세요');
+    if (pin !== TEACHER_PIN){ if (pin !== null) toast('비밀번호가 달라요'); return; }
+    me.role = 'teacher'; try { sessionStorage.setItem('oneRole_t_' + ROOM, '1'); } catch(e){}
+    render();
+  },
+  logoutTeacher(){ me.role = null; try { sessionStorage.removeItem('oneRole_t_' + ROOM); } catch(e){} render(); },
+  chooseMe(sid){ me.sid = sid; try { localStorage.setItem('oneRole_sid_' + ROOM, sid); } catch(e){} render(); },
+  forgetMe(){ me.sid = null; try { localStorage.removeItem('oneRole_sid_' + ROOM); } catch(e){} render(); },
+  toggleBig(){ ui.bigView = !ui.bigView; render(); },
+
+  editRole(id, f, v){ store.set('roles/' + id + '/' + f, v); },
+  slot(id, d){ const n = Math.max(1, Math.min(15, (+S.roles[id].slots || 1) + d)); store.set('roles/' + id + '/slots', n); },
+  addRole(){
+    const order = Math.max(0, ...roles().map(r => r.order || 0)) + 1;
+    store.set('roles/' + uid('r'), {emoji: '⭐', name: '새 역할', desc: '', reason: '', time: '쉬는 시간', slots: 1, order});
+  },
+  delRole(id){ if (confirm('“' + S.roles[id].name + '” 역할을 지울까요?')) store.set('roles/' + id, null); },
+  saveNames(){
+    const lines = document.getElementById('names').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!lines.length) return toast('이름을 한 명 이상 적어 주세요');
+    const st = {}; lines.forEach((n, i) => st['s' + String(i + 1).padStart(2, '0')] = {no: i + 1, name: n});
+    store.update({students: st}).then(() => toast('명단을 저장했어요 (' + lines.length + '명)'));
+  },
+  setDur(s){ store.set('settings/duration', s); },
+
+  startRound(){
+    const first = (S.phase || 'setup') === 'setup';
+    const d = dur();
+    const up = {phase: 'apply', round: first ? 1 : (S.round || 1) + 1, picks: null, games: null, endsAt: store.now() + d * 1000, duration: d};
+    if (first) up.assigned = null;
+    store.update(up);
+  },
+  addTime(sec){ store.update({endsAt: (S.endsAt || store.now()) + sec * 1000, duration: (S.duration || dur()) + sec}); },
+
+  pick(rid){
+    if (S.phase !== 'apply' || store.now() > (S.endsAt || 0)) return toast('지원 시간이 끝났어요');
+    if (assigned()[me.sid]) return;
+    store.set('picks/' + me.sid, rid);
+  },
+
+  async closeRound(){
+    if (closing || S.phase !== 'apply') return;
+    closing = true;
+    try {
+      const picks = S.picks || {}, un = unassigned(), up = {}, games = {}, byRole = {};
+      un.forEach(s => { const r = picks[s.id]; if (r && S.roles?.[r] && rem(r) > 0) (byRole[r] = byRole[r] || []).push(s.id); });
+      let newly = 0;
+      for (const [rid, ids] of Object.entries(byRole)){
+        const R = rem(rid);
+        if (ids.length <= R){ ids.forEach(id => { up['assigned/' + id] = rid; newly++; }); }
+        else {
+          const wins = shuffle([...Array(ids.length).keys()]).slice(0, R);
+          const cards = {}; for (let i = 0; i < ids.length; i++) cards['c' + i] = {win: wins.includes(i)};
+          const players = {}; ids.forEach(id => players[id] = true);
+          games[rid] = {slots: R, players, cards, revealed: false};
+        }
+      }
+      const hasGame = Object.keys(games).length > 0;
+      up.games = hasGame ? games : null;
+      up.phase = hasGame ? 'game' : (un.length - newly === 0 ? 'done' : 'closed');
+      up.endsAt = null;
+      await store.update(up);
+    } finally { closing = false; }
+  },
+
+  async pickCard(rid, cid){
+    const g = S.games?.[rid];
+    if (!g || g.revealed || !g.players?.[me.sid]) return;
+    if (Object.values(g.cards || {}).some(c => c.by === me.sid)) return;
+    const ok = await store.claim('games/' + rid + '/cards/' + cid + '/by', me.sid);
+    if (!ok) toast('앗, 다른 친구가 먼저 골랐어요! 다른 카드를 골라요');
+  },
+  autoFill(rid, up){
+    const g = S.games[rid]; const cards = g.cards || {};
+    const taken = new Set(Object.values(cards).map(c => c.by).filter(Boolean));
+    const waiting = shuffle(Object.keys(g.players || {}).filter(p => !taken.has(p)));
+    const free = Object.keys(cards).filter(cid => !cards[cid].by);
+    waiting.forEach((sid, i) => { if (free[i]) up['games/' + rid + '/cards/' + free[i] + '/by'] = sid; });
+    return up;
+  },
+  autoPick(rid){ store.update(act.autoFill(rid, {})); },
+  revealUp(rid, up){
+    act.autoFill(rid, up);
+    const cards = S.games[rid].cards || {};
+    for (const cid in cards){
+      const by = up['games/' + rid + '/cards/' + cid + '/by'] || cards[cid].by;
+      if (cards[cid].win && by) up['assigned/' + by] = rid;
+    }
+    up['games/' + rid + '/revealed'] = true;
+    return up;
+  },
+  reveal(rid){ store.update(act.revealUp(rid, {})); },
+  revealAll(){
+    const up = {};
+    Object.entries(S.games || {}).forEach(([rid, g]) => { if (!g.revealed) act.revealUp(rid, up); });
+    store.update(up);
+  },
+  afterGames(){ store.update({games: null, phase: unassigned().length ? 'closed' : 'done'}); },
+
+  randomRest(){
+    const un = shuffle(unassigned().map(s => s.id));
+    const seats = []; roles().forEach(r => { for (let i = 0; i < rem(r.id); i++) seats.push(r.id); });
+    shuffle(seats);
+    const up = {}; let left = un.length;
+    un.forEach((sid, i) => { if (seats[i]){ up['assigned/' + sid] = seats[i]; left--; } });
+    up.phase = left === 0 ? 'done' : 'closed';
+    store.update(up);
+  },
+  backToSetup(){
+    if (!confirm('배정 결과를 지우고 역할 토의 단계로 돌아갈까요? (역할과 명단은 그대로 남아요)')) return;
+    store.update({phase: 'setup', assigned: null, picks: null, games: null, round: null, endsAt: null});
+  },
+  resetAll(){
+    if (!confirm('역할·명단·결과를 모두 지우고 기본값으로 되돌릴까요?')) return;
+    store.update(Object.assign({roles: null, students: null, assigned: null, picks: null, games: null, round: null, endsAt: null}, {}))
+      .then(() => store.update(defaultsMap()));
+  },
+  print(){ window.print(); }
 };
 
-/* ─── 상수 ─── */
-const STUDENTS = [
-  '김다온','김도영','김채화','백수민','소진호','신은비','유준선','윤하늘',
-  '이보현','이지은','임규원','임휘재','장문혁','장준혁','한승우'
-];
-const MONTHS = [6,7,9,10,11,12,1];
-const ML = {6:'6월',7:'7월',9:'9월',10:'10월',11:'11월',12:'12월',1:'1월'};
-let ROLES = [
-  {id:'door',       name:'사육장 문 확인', icon:'🚪', count:1, time:'수시'},
-  {id:'temp',       name:'온도 체크',       icon:'🌡️', count:1, time:'수시'},
-  {id:'spray',      name:'오전·오후 분무',  icon:'💧', count:1, time:'수시'},
-  {id:'feed',       name:'먹이 교체',       icon:'🥬', count:1, time:'수시'},
-  {id:'pad',        name:'패드 교체',       icon:'🧻', count:1, time:'수시'},
-  {id:'water',      name:'물병 교체',       icon:'🍶', count:1, time:'수시'},
-  {id:'frontSweep', name:'교실 앞 쓸기',    icon:'🧹', count:1, time:'방과후'},
-  {id:'backSweep',  name:'교실 뒤 쓸기',    icon:'🧹', count:1, time:'방과후'},
-  {id:'library',    name:'학급 문고 정리',  icon:'📚', count:2, time:'수시'},
-  {id:'secretary',  name:'비서',            icon:'📋', count:1, time:'수시'},
-  {id:'window',     name:'창문 환기',       icon:'🪟', count:2, time:'아침활동'},
-  {id:'milk',       name:'우유 배달',       icon:'🥛', count:2, time:'아침·점심'},
-];
-
-/* ─── 앱 상태 ─── */
-let db, unsubscribe = null, rtLogs = [], rtPanelOpen = false;
-let state = {}, currentStudent = null, currentMonth = 6;
-let adminCurrentMonth = 6, manageCurrentMonth = 6, selectedMonthForTable = 6;
-let editState = {}, rpsState = {};
-let sessionState = {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0};
-let competitionsState = {};
-let phaseTicker = null;
-
-/* ─── Firebase 초기화 ─── */
-async function initFirebase() {
-  try {
-    const app = initializeApp(firebaseConfig);
-    db = getDatabase(app);
-    const rolesSnap = await get(ref(db, 'rolesConfig'));
-    if (!rolesSnap.exists()) {
-      const seed = {};
-      ROLES.forEach((r,i) => { seed[r.id] = {name:r.name, icon:r.icon, time:r.time, count:r.count, locked:true, order:i}; });
-      await set(ref(db, 'rolesConfig'), seed);
-    }
-    const snap = await get(ref(db, 'oneRole'));
-    if (!snap.exists()) {
-      const init = {};
-      MONTHS.forEach(m => {
-        init[m] = {};
-        ROLES.forEach(r => { init[m][r.id] = {applicants:{}, assigned:{}}; });
-      });
-      await set(ref(db, 'oneRole'), init);
-    }
-    const sessionSnap = await get(ref(db,'session'));
-    if (!sessionSnap.exists()) await set(ref(db,'session'), {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0});
-    const compSnap = await get(ref(db,'competitions'));
-    if (!compSnap.exists()) await set(ref(db,'competitions'), {});
-    initLocalState();
-    startListeners();
-    startPhaseTicker();
-    setStatus('connected', '연결됨 ✅');
-    document.getElementById('btnStudent').disabled = false;
-    document.getElementById('btnAdmin').disabled   = false;
-    hideLoading();
-  } catch(e) {
-    setStatus('disconnected', '연결 실패 ❌');
-    hideLoading();
-    showToast('Firebase 연결 실패: ' + e.message);
-  }
+/* ---------------- 공통 조각 ---------------- */
+function roleCard(r, extra = '', cls = '', click = ''){
+  return `<div class="rcard ${cls}" ${click ? `onclick="${click}"` : ''}>
+    <div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div><div class="tag">🕘 ${esc(r.time)} · 👥 ${r.slots}명</div></div></div>
+    ${r.desc ? `<div class="desc">🛠 ${esc(r.desc)}</div>` : ''}
+    ${r.reason ? `<div class="reason">💡 ${esc(r.reason)}</div>` : ''}
+    ${extra}</div>`;
 }
-
-function initLocalState() {
-  MONTHS.forEach(m => {
-    state[m] = {};
-    ROLES.forEach(r => { state[m][r.id] = {applicants:[], assigned:[]}; });
-  });
-}
-
-/* ─── 실시간 리스너 ─── */
-function startListeners() {
-  if (unsubscribe) unsubscribe();
-  onValue(ref(db, 'rolesConfig'), snap => {
-    const data = snap.val() || {};
-    const list = Object.entries(data).map(([id,v]) => ({id, ...v}));
-    if (list.length) {
-      list.sort((a,b)=>(a.order??0)-(b.order??0));
-      ROLES = list;
-    }
-    MONTHS.forEach(m => {
-      if (!state[m]) state[m] = {};
-      ROLES.forEach(r => { if (!state[m][r.id]) state[m][r.id] = {applicants:[], assigned:[]}; });
-    });
-    onDataUpdated();
-    if (document.getElementById('adminScreen')?.classList.contains('active')) renderRolesManage();
-  });
-  unsubscribe = onValue(ref(db, 'oneRole'), snap => {
-    const data = snap.val() || {};
-    MONTHS.forEach(m => {
-      if (!state[m]) state[m] = {};
-      ROLES.forEach(r => {
-        const raw = (data[m]?.[r.id]) ?? {};
-        state[m][r.id] = {
-          applicants: raw.applicants ? Object.values(raw.applicants) : [],
-          assigned:   raw.assigned   ? Object.values(raw.assigned)   : [],
-        };
-      });
-    });
-    onDataUpdated();
-  });
-  onValue(ref(db,'session'), snap => {
-    sessionState = snap.val() || {mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0};
-    onDataUpdated();
-  });
-  onValue(ref(db,'competitions'), snap => {
-    competitionsState = snap.val() || {};
-    onDataUpdated();
-  });
-  onValue(ref(db, 'logs'), snap => {
-    const data = snap.val() || {};
-    rtLogs = Object.values(data).sort((a,b)=>b.ts-a.ts).slice(0,40);
-    renderRtLog();
-  });
-}
-
-function onDataUpdated() {
-  const sOn = document.getElementById('studentScreen').classList.contains('active');
-  const aOn = document.getElementById('adminScreen').classList.contains('active');
-  renderStudentPhaseArea();
-  renderStudentCompetitionArea();
-  if (sOn) {
-    updateProgress();
-    if (currentStudent) {
-      const myA = getAssignedRole(currentStudent, currentMonth);
-      if (myA) { showMyRoleBanner(myA); document.getElementById('roleSelectionArea').style.display='none'; }
-      else { renderRolesGrid(); renderSubmitArea(); }
-    }
-  }
-  if (aOn) {
-    renderStats();
-    renderAdminSessionBox();
-    const active = document.querySelector('.tab-content.active');
-    if (active) {
-      const id = active.id.replace('tab-','');
-      if (id==='overview') renderOverview();
-      if (id==='monthly')  renderMonthlyTable();
-      if (id==='students') renderStudentStatus();
-      if (id==='manage')   renderManageTable();
-      if (id==='roles')    renderRolesManage();
-    }
-  }
-}
-
-/* ─── Firebase CRUD ─── */
-const fkey = s => s.replace(/[.#$[$$$]/g,'_');
-async function fbAddApplicant(m,rid,name) {
-  await set(ref(db,`oneRole/${m}/${rid}/applicants/${fkey(name)}`),name);
-  await addLog(`📝 ${name} → ${ML[m]} ${roleName(rid)} 신청`);
-}
-async function fbRemoveApplicant(m,rid,name) {
-  await remove(ref(db,`oneRole/${m}/${rid}/applicants/${fkey(name)}`));
-  await addLog(`❌ ${name} → ${ML[m]} ${roleName(rid)} 신청 취소`);
-}
-async function fbSetAssigned(m,rid,names) {
-  const obj={};
-  names.forEach(n=>{obj[fkey(n)]=n;});
-  await set(ref(db,`oneRole/${m}/${rid}/assigned`),obj);
-}
-async function fbClearMonth(m) {
-  const obj={};
-  ROLES.forEach(r=>{obj[r.id]={applicants:{},assigned:{}};});
-  await set(ref(db,`oneRole/${m}`),obj);
-}
-async function fbClearAll() {
-  const obj={};
-  MONTHS.forEach(m=>{obj[m]={};ROLES.forEach(r=>{obj[m][r.id]={applicants:{},assigned:{}};});});
-  await set(ref(db,'oneRole'),obj);
-  await set(ref(db,'logs'),null);
-}
-async function addLog(msg) {
-  try { await push(ref(db,'logs'),{msg,ts:Date.now()}); } catch(_){}
-}
-const roleName = id => ROLES.find(r=>r.id===id)?.name ?? id;
-
-const HAND_LABELS = {'rock':'✊ 바위','scissors':'✌️ 가위','paper':'🖐️ 보'};
-const handEmoji = h => ({rock:'✊',scissors:'✌️',paper:'🖐️'}[h] || '❔');
-const activeCompetitionsForMonth = m => competitionsState?.[m] || {};
-const getCompetition = (m,rid) => activeCompetitionsForMonth(m)?.[rid] || null;
-const getRemainingMs = ts => Math.max(0, (ts||0) - Date.now());
-function formatRemain(ms) {
-  const total = Math.ceil(ms/1000);
-  const m = Math.floor(total/60);
-  const s = Math.max(0,total%60);
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-function getSessionMonth(){ return parseInt(sessionState?.month || currentMonth || 6); }
-function getRoleById(roleId){ return ROLES.find(r=>r.id===roleId); }
-
-
-function startPhaseTicker() {
-  if (phaseTicker) clearInterval(phaseTicker);
-  phaseTicker = setInterval(async () => {
-    renderStudentPhaseArea();
-    renderStudentCompetitionArea();
-    renderAdminSessionBox();
-    try {
-      if (sessionState.mode === 'selection' && sessionState.selectionEndsAt && Date.now() >= sessionState.selectionEndsAt) {
-        await finalizeSelection(sessionState.month, true);
-      } else if (sessionState.mode === 'rps' && sessionState.rpsEndsAt && Date.now() >= sessionState.rpsEndsAt) {
-        await finalizeAllCompetitions(sessionState.month, true);
-      }
-    } catch(e) {}
-  }, 1000);
-}
-
-async function setSession(data) {
-  await set(ref(db,'session'), data);
-}
-
-function renderStudentPhaseArea() {
-  const area = document.getElementById('studentPhaseArea');
-  if (!area) return;
-  const month = currentMonth;
-  let title='대기 중';
-  let timer='';
-  let help='관리자가 역할 선택을 시작하면 학생들이 같은 달 역할을 1분 동안 신청할 수 있습니다.';
-  if (sessionState.mode === 'selection' && parseInt(sessionState.month) === month) {
-    title = `${ML[month]} 역할 선택 진행 중`;
-    timer = formatRemain(getRemainingMs(sessionState.selectionEndsAt));
-    help = '지금은 역할 신청 시간입니다. 한 학생당 한 역할만 신청할 수 있어요.';
-  } else if (sessionState.mode === 'rps' && parseInt(sessionState.month) === month) {
-    title = `${ML[month]} 가위바위보 진행 중`;
-    timer = formatRemain(getRemainingMs(sessionState.rpsEndsAt));
-    help = '정원보다 많이 신청한 역할만 경쟁합니다. 해당 학생들은 아래에서 동시에 제출하세요.';
-  } else if (sessionState.mode === 'done' && parseInt(sessionState.month) === month) {
-    title = `${ML[month]} 배정 완료`;
-    help = '이번 달 배정이 완료되었습니다.';
-  }
-  area.innerHTML = `<div class="phase-banner">
-    <div class="phase-row">
-      <div><span class="phase-pill">${title}</span></div>
-      ${timer?`<div class="phase-timer">남은 시간 ${timer}</div>`:''}
-    </div>
-    <div class="phase-help">${help}</div>
+function roleEditor(r){
+  return `<div class="rcard edit">
+    <div class="row"><input class="emoji" value="${esc(r.emoji)}" onchange="act.editRole('${r.id}','emoji',this.value)">
+      <input class="rname" value="${esc(r.name)}" placeholder="역할 이름" onchange="act.editRole('${r.id}','name',this.value)">
+      <button class="x" title="지우기" onclick="act.delRole('${r.id}')">🗑</button></div>
+    <label>🛠 하는 일</label><textarea rows="2" onchange="act.editRole('${r.id}','desc',this.value)">${esc(r.desc)}</textarea>
+    <label>💡 추천 이유 (왜 필요할까?)</label><textarea rows="2" onchange="act.editRole('${r.id}','reason',this.value)">${esc(r.reason)}</textarea>
+    <label>🕘 하는 시간</label><div class="chips sm">${TIMES.map(t => `<button class="chip ${r.time === t ? 'on' : ''}" onclick="act.editRole('${r.id}','time','${t}')">${t}</button>`).join('')}</div>
+    <label>👥 인원</label><div class="stepper"><button onclick="act.slot('${r.id}',-1)">−</button><b>${r.slots}명</b><button onclick="act.slot('${r.id}',1)">＋</button></div>
   </div>`;
 }
-
-function renderStudentCompetitionArea() {
-  const area = document.getElementById('studentCompetitionArea');
-  if (!area) return;
-  if (!currentStudent || sessionState.mode !== 'rps' || parseInt(sessionState.month)!==currentMonth) {
-    area.innerHTML = '';
-    return;
-  }
-  const comps = activeCompetitionsForMonth(currentMonth);
-  const entries = Object.entries(comps).filter(([_,comp]) => (comp.participants||[]).includes(currentStudent) && comp.status!=='done');
-  if (!entries.length) {
-    area.innerHTML = '';
-    return;
-  }
-  area.innerHTML = entries.map(([roleId,comp]) => {
-    const role = getRoleById(roleId);
-    const hands = comp.hands || {};
-    const myHand = hands[currentStudent] || '';
-    const submittedCount = Object.keys(hands).length;
-    return `<div class="competition-card">
-      <h3>✊✌️🖐️ ${role.icon} ${role.name} 경쟁</h3>
-      <div class="mini-note">참가자 ${comp.participants.length}명 / 선발 ${comp.count}명 · 제출 ${submittedCount}/${comp.participants.length}</div>
-      <div class="competition-participants">${comp.participants.map(n=>`<span class="competition-chip">${n}${hands[n]?` ${handEmoji(hands[n])}`:''}</span>`).join('')}</div>
-      <div class="hand-grid">
-        <button class="hand-btn ${myHand==='rock'?'selected':''}" onclick="submitCompetitionHand('${roleId}','rock')">✊ 바위</button>
-        <button class="hand-btn ${myHand==='scissors'?'selected':''}" onclick="submitCompetitionHand('${roleId}','scissors')">✌️ 가위</button>
-        <button class="hand-btn ${myHand==='paper'?'selected':''}" onclick="submitCompetitionHand('${roleId}','paper')">🖐️ 보</button>
-      </div>
-      <div class="mini-note">${myHand ? `내 제출: ${HAND_LABELS[myHand]}` : '아직 제출하지 않았습니다.'}</div>
-    </div>`;
-  }).join('');
+const timerHtml = () => `<div class="timer" data-timer><div class="tnum">--</div><div class="tbar"><i></i></div></div>`;
+function stepper(){
+  const p = S.phase || 'setup';
+  const idx = {setup: 0, apply: 1, game: 2, closed: 2, done: 3}[p] ?? 0;
+  const st = ['① 역할 토의', '② 지원하기', '③ 미니게임', '④ 결과'];
+  return `<div class="steps">${st.map((s, i) => `<span class="${i === idx ? 'on' : i < idx ? 'done' : ''}">${s}</span>`).join('')}</div>`;
+}
+function modeBanner(){
+  return store.mode === 'local' ? `<div class="banner">🧪 <b>체험 모드</b>예요. 이 브라우저 안에서만 저장돼요. 다른 탭에서 <code>?mode=student</code> 주소로 열면 학생 화면을 함께 시험해 볼 수 있어요. 여러 태블릿에서 쓰려면 파일 위쪽의 <code>FIREBASE_CONFIG</code>를 채워 주세요.</div>` : '';
+}
+function linkPanel(){
+  const l = studentLink();
+  return `<section class="panel noprint"><h3>📲 학생 접속 주소</h3><div class="qr">
+    <img width="150" height="150" alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(l)}" onerror="this.remove()">
+    <div><code>${esc(l)}</code><p class="hint">태블릿으로 QR을 찍거나 주소를 열고, 자기 이름을 누르면 돼요.</p></div></div></section>`;
+}
+function resultBoard(){
+  const A = assigned(), rs = roles();
+  const times = [...TIMES, ...new Set(rs.map(r => r.time).filter(t => !TIMES.includes(t)))];
+  return `<section class="panel"><h2>📋 우리 반 1인 1역</h2>${times.map(t => {
+    const list = rs.filter(r => r.time === t); if (!list.length) return '';
+    return `<h3 class="time">🕘 ${esc(t)}</h3>${list.map(r => {
+      const ns = Object.keys(A).filter(s => A[s] === r.id).map(stuName);
+      const empty = Math.max(0, (+r.slots || 0) - ns.length);
+      return `<div class="rrow"><span class="em">${esc(r.emoji)}</span><b>${esc(r.name)}</b><span class="rdesc">${esc(r.desc)}</span>
+        <span class="names">${ns.map(n => `<span class="nm">${esc(n)}</span>`).join('')}${'<span class="nm empty">빈자리</span>'.repeat(empty)}</span></div>`;
+    }).join('')}`;
+  }).join('')}</section>`;
+}
+function myRoleBox(r, title = '나의 역할'){
+  return `<div class="myrole"><div class="em">${esc(r.emoji)}</div><div class="hint">${title}</div><h2>${esc(r.name)}</h2>
+    <div class="tag">🕘 ${esc(r.time)}</div>${r.desc ? `<p>🛠 ${esc(r.desc)}</p>` : ''}</div>`;
+}
+function cardHtml(rid, cid, c, g, who){
+  const mine = who !== 'teacher' && c.by && c.by === me.sid;
+  const showName = who === 'teacher' || g.revealed;
+  const label = c.by ? (showName ? esc(stuName(c.by)) : (mine ? '내 카드' : '선택됨')) : '';
+  const canPick = who === 'student' && !g.revealed && !c.by && g.players?.[me.sid] && !Object.values(g.cards || {}).some(x => x.by === me.sid);
+  return `<button class="pcard ${g.revealed ? 'flip' : ''} ${c.by ? 'taken' : ''} ${mine ? 'mine' : ''} ${g.revealed && c.win ? 'win' : ''}" ${canPick ? `onclick="act.pickCard('${rid}','${cid}')"` : 'disabled'}>
+    <span class="inner"><span class="back">❓<small>${label}</small></span><span class="front">${c.win ? '🎉' : '🍀'}<small>${label}</small></span></span></button>`;
+}
+function gameBoard(rid, g, who){
+  const r = S.roles?.[rid] || {};
+  const cards = Object.entries(g.cards || {}).sort((a, b) => +a[0].slice(1) - +b[0].slice(1));
+  const players = Object.keys(g.players || {});
+  const taken = new Set(cards.map(([, c]) => c.by).filter(Boolean));
+  const waiting = players.filter(p => !taken.has(p));
+  return `<section class="panel center">
+    <h3>${esc(r.emoji)} ${esc(r.name)} — <b>${g.slots}</b>자리에 <b>${players.length}</b>명 지원</h3>
+    <div class="cards">${cards.map(([cid, c]) => cardHtml(rid, cid, c, g, who)).join('')}</div>
+    ${who === 'teacher' && !g.revealed ? `<div class="row center">
+      ${waiting.length ? `<span class="hint">카드 고르는 중: ${waiting.map(p => esc(stuName(p))).join(', ')}</span><button class="btn" onclick="act.autoPick('${rid}')">남은 카드 대신 뽑기</button>` : '<span class="hint">모두 골랐어요!</span>'}
+      <button class="btn primary" onclick="act.reveal('${rid}')">✨ 결과 공개</button></div>` : ''}
+  </section>`;
 }
 
-function renderAdminSessionBox() {
-  const area = document.getElementById('adminSessionBox');
-  if (!area) return;
-  const month = parseInt(document.getElementById('adminMonthSelect')?.value || adminCurrentMonth || 6);
-  adminCurrentMonth = month;
-  let modeText = '대기 중';
-  let timer = '';
-  if (sessionState.mode === 'selection' && parseInt(sessionState.month) === month) {
-    modeText = `${ML[month]} 역할 선택 진행 중`;
-    timer = formatRemain(getRemainingMs(sessionState.selectionEndsAt));
-  } else if (sessionState.mode === 'rps' && parseInt(sessionState.month) === month) {
-    modeText = `${ML[month]} 가위바위보 진행 중`;
-    timer = formatRemain(getRemainingMs(sessionState.rpsEndsAt));
-  } else if (sessionState.mode === 'done' && parseInt(sessionState.month) === month) {
-    modeText = `${ML[month]} 배정 완료`;
-  }
-  const comps = Object.entries(activeCompetitionsForMonth(month));
-  const roleCards = comps.length
-    ? comps.map(([roleId, comp]) => {
-        const role = getRoleById(roleId);
-        const submitted = Object.keys(comp.hands||{}).length;
-        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:white;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:8px;">
-          <div>
-            <span style="font-weight:700;">${role.icon} ${role.name}</span>
-            <span class="mini-note" style="margin-left:8px;">참가 ${(comp.participants||[]).length}명 · 선발 ${comp.count}명 · 제출 ${submitted}/${(comp.participants||[]).length}</span>
-          </div>
-          <button class="action-btn btn-primary" style="padding:7px 14px;font-size:.8rem;margin:0;" onclick="openMethodModal('${month}','${roleId}')">🎯 선발 방식</button>
-        </div>`;
-      }).join('')
-    : '<div class="mini-note" style="margin-top:6px;">현재 경쟁 역할 없음</div>';
-  area.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;">
-      <div>
-        <div style="font-weight:800;color:#334;">운영 단계</div>
-        <div class="meta"><span>${modeText}</span>${timer?`<span>남은 시간 ${timer}</span>`:''}</div>
-      </div>
-      <div class="controls">
-        <button class="action-btn btn-primary" onclick="startSelectionRound()">▶️ 1분 선택 시작</button>
-        <button class="action-btn btn-warning" onclick="closeSelectionRound()">⏹️ 신청 마감</button>
-        <button class="action-btn btn-success" onclick="finalizeRpsRound()">✅ 가위바위보 결과 반영</button>
-      </div>
-    </div>
-    ${roleCards}`;
+/* ---------------- 선생님 화면 ---------------- */
+function tSetup(){
+  const rs = roles(), st = students(), sum = totalSlots(), n = st.length;
+  const ok = n > 0 && rs.length > 0 && sum === n;
+  return `<section class="panel">
+    <div class="row between"><h2>① 역할 토의하기</h2><button class="btn" onclick="act.toggleBig()">${ui.bigView ? '✏️ 고치기' : '📺 크게 보기'}</button></div>
+    <p class="hint">어떤 역할이 필요한지, 왜 필요한지(추천 이유), 언제 하는지, 몇 명이 하면 좋을지 친구들과 이야기 나누고 카드에 정리해요. 학생 태블릿에도 바로 보여요.</p>
+    <div class="sum ${sum === n ? 'ok' : 'bad'}">인원 합계 <b>${sum}</b>자리 / 우리 반 <b>${n}</b>명 ${sum === n ? '✅ 딱 맞아요!' : sum < n ? `— ${n - sum}자리 더 필요해요` : `— ${sum - n}자리 줄여야 해요`}</div>
+    <div class="grid">${ui.bigView ? rs.map(r => roleCard(r)).join('') : rs.map(roleEditor).join('') + `<button class="addcard" onclick="act.addRole()">＋ 역할 추가</button>`}</div>
+  </section>
+  <section class="panel"><h2>👧 우리 반 명단 (${n}명)</h2>
+    <p class="hint">한 줄에 한 명씩, 번호 순서대로 적고 저장해요.</p>
+    <textarea id="names" rows="6">${esc(st.map(s => s.name).join('\n'))}</textarea>
+    <button class="btn" onclick="act.saveNames()">명단 저장</button></section>
+  <section class="panel"><h2>⏱️ 지원 시간</h2>
+    <div class="chips">${[60, 120, 180, 300].map(s => `<button class="chip ${dur() === s ? 'on' : ''}" onclick="act.setDur(${s})">${s / 60}분</button>`).join('')}</div></section>
+  ${linkPanel()}
+  <div class="bottombar"><button class="btn big primary" ${ok ? '' : 'disabled'} onclick="act.startRound()">🚀 1차 지원 시작</button>
+    ${ok ? '' : '<div class="hint">역할 인원 합계와 학생 수가 같아야 시작할 수 있어요</div>'}</div>`;
+}
+function tApply(){
+  const picks = S.picks || {}, un = unassigned();
+  const open = roles().filter(r => rem(r.id) > 0);
+  const notPicked = un.filter(s => !picks[s.id] || !S.roles?.[picks[s.id]]);
+  return `<section class="panel center"><h2>${S.round}차 지원 중!</h2>${timerHtml()}
+    <div class="row center"><button class="btn" onclick="act.addTime(30)">+30초</button><button class="btn danger" onclick="act.closeRound()">지금 마감</button></div></section>
+  <div class="grid">${open.map(r => {
+    const ap = un.filter(s => picks[s.id] === r.id), R = rem(r.id);
+    const cls = ap.length > R ? 'over' : ap.length === R ? 'full' : '';
+    return `<div class="rcard ${cls}"><div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div><div class="tag">🕘 ${esc(r.time)}</div></div>
+      <div class="count">${ap.length}<small>/${R}</small></div></div>
+      <div class="names">${ap.map(s => `<span class="nm">${esc(s.name)}</span>`).join('') || '<span class="hint">아직 없어요</span>'}</div>
+      ${ap.length > R ? '<div class="warn">🎲 마감되면 미니게임!</div>' : ''}</div>`;
+  }).join('')}</div>
+  <section class="panel"><h3>🤔 아직 고르지 않은 친구 (${notPicked.length}명)</h3>
+    <div class="names">${notPicked.map(s => `<span class="nm gray">${esc(s.name)}</span>`).join('') || '<span class="hint">모두 골랐어요!</span>'}</div></section>`;
+}
+function tGame(){
+  const gs = Object.entries(S.games || {});
+  const allRev = gs.every(([, g]) => g.revealed);
+  return `<section class="panel center"><h2>🎲 미니게임: 행운의 카드 뽑기</h2>
+    <p class="hint">자리보다 지원자가 많은 역할이에요. 지원한 친구들이 자기 태블릿에서 카드를 한 장씩 골라요.<br>🎉 카드를 뽑은 친구가 그 역할을 맡고, 🍀 카드를 뽑은 친구는 다음 지원에서 다시 골라요.</p>
+    ${allRev ? `<button class="btn big primary" onclick="act.afterGames()">다음으로 ▶</button>` : `<button class="btn big" onclick="act.revealAll()">✨ 모두 공개</button>`}</section>
+  ${gs.map(([rid, g]) => gameBoard(rid, g, 'teacher')).join('')}`;
+}
+function tClosed(){
+  const un = unassigned(), open = roles().filter(r => rem(r.id) > 0);
+  return `<section class="panel center"><h2>${S.round}차 지원 결과</h2>
+    <p>배정 완료 <b>${students().length - un.length}</b>명 · 아직 역할이 없는 친구 <b>${un.length}</b>명</p>
+    <div class="names center">${un.map(s => `<span class="nm">${esc(s.name)}</span>`).join('')}</div>
+    <h3>남은 자리</h3><div class="names center">${open.map(r => `<span class="nm gray">${esc(r.emoji)} ${esc(r.name)} ${rem(r.id)}자리</span>`).join('')}</div>
+    <div class="row center" style="margin-top:14px"><button class="btn big primary" ${open.length ? '' : 'disabled'} onclick="act.startRound()">🚀 ${S.round + 1}차 지원 시작</button>
+      <button class="btn" onclick="act.randomRest()">🎲 남은 친구 무작위 배정</button></div></section>
+  ${resultBoard()}`;
+}
+function tDone(){
+  return `<section class="panel center"><h2>🎊 1인 1역이 모두 정해졌어요!</h2>
+    <div class="row center noprint"><button class="btn primary" onclick="act.print()">🖨 인쇄하기</button><button class="btn" onclick="act.backToSetup()">↩ 처음부터 다시 정하기</button></div></section>
+  ${resultBoard()}`;
+}
+function teacherView(){
+  if (loaded && !S.roles && !initDone){ initDone = true; store.update(defaultsMap()); }
+  const p = S.phase || 'setup';
+  const body = {setup: tSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSetup;
+  return `<div class="thead noprint"><b>🧑‍🏫 선생님 화면 · ${esc(ROOM)}</b>${stepper()}</div>${modeBanner()}${body()}
+    <div class="footer">${p !== 'setup' ? `<button class="btn" onclick="act.backToSetup()">↩ 역할 토의로 돌아가기</button>` : ''}
+      <button class="btn" onclick="act.resetAll()">🔄 전체 초기화</button><button class="btn" onclick="act.logoutTeacher()">나가기</button></div>`;
 }
 
-window.startSelectionRound = async function() {
-  const month = parseInt(document.getElementById('adminMonthSelect').value);
-  if (sessionState.mode === 'selection' || sessionState.mode === 'rps') {
-    if (!confirm('현재 진행 중인 단계가 있습니다. 새로 시작하면 현재 단계를 덮어씁니다. 계속할까요?')) return;
-  }
-  showLoading('선택 시작 중...');
-  try {
-    await set(ref(db, `competitions/${month}`), null);
-    await setSession({mode:'selection', month, selectionEndsAt:Date.now()+60000, rpsEndsAt:0});
-    await addLog(`🕐 관리자: ${ML[month]} 역할 선택 1분 시작`);
-    showToast(`${ML[month]} 역할 선택이 시작되었습니다.`);
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-
-window.closeSelectionRound = async function() {
-  const month = parseInt(document.getElementById('adminMonthSelect').value);
-  await finalizeSelection(month, false);
-};
-
-async function finalizeSelection(month, silent) {
-  if (sessionState.mode !== 'selection' || parseInt(sessionState.month)!==parseInt(month)) return;
-  showLoading('신청 마감 처리 중...');
-  try {
-    const compObj = {};
-    for (const role of ROLES) {
-      const applicants = [...(state[month]?.[role.id]?.applicants || [])];
-      const assigned = [...(state[month]?.[role.id]?.assigned || [])];
-      if (applicants.length === 0) continue;
-      if (applicants.length <= role.count) {
-        await fbSetAssigned(month, role.id, [...new Set([...assigned, ...applicants])].slice(0, role.count));
-        await set(ref(db, `oneRole/${month}/${role.id}/applicants`), null);
-      } else {
-        compObj[role.id] = {
-          participants: applicants,
-          count: role.count,
-          hands: {},
-          round: 1,
-          status: 'waiting'
-        };
-      }
+/* ---------------- 학생 화면 ---------------- */
+function sPickName(){
+  const st = students();
+  if (!st.length) return `<div class="home"><div class="logo">⏳</div><h2>선생님이 준비하고 있어요</h2></div>`;
+  return `<section class="panel center"><h2>🙋 내 이름을 눌러 주세요</h2>
+    <div class="namegrid">${st.map(s => `<button class="btn" onclick="act.chooseMe('${s.id}')">${s.no}. ${esc(s.name)}</button>`).join('')}</div></section>`;
+}
+function studentView(){
+  if (!loaded) return `<div class="home"><div class="logo">⏳</div><h2>연결하는 중…</h2></div>`;
+  if (!me.sid || !S.students?.[me.sid]) return sPickName();
+  const head = `<div class="me">👋 <b>${esc(stuName(me.sid))}</b> <button class="link" onclick="act.forgetMe()">내가 아니에요</button></div>`;
+  const p = S.phase || 'setup';
+  const mr = S.roles?.[assigned()[me.sid]];
+  let body = '';
+  if (p === 'setup'){
+    body = `<section class="panel center"><h2>💬 역할 토의 중</h2><p>어떤 역할이 우리 반에 필요할까요? 카드를 읽고 내가 하고 싶은 역할을 생각해 봐요!</p></section>
+      <div class="grid">${roles().map(r => roleCard(r)).join('')}</div>`;
+  } else if (p === 'apply'){
+    if (mr) body = myRoleBox(mr, '이미 정해진 나의 역할') + `<p class="center hint">친구들이 지원하고 있어요. 잠시 기다려요!</p>`;
+    else {
+      const picks = S.picks || {}, un = unassigned(), myPick = picks[me.sid];
+      const expired = store.now() > (S.endsAt || 0);
+      const open = roles().filter(r => rem(r.id) > 0);
+      body = `<section class="panel center"><h2>${S.round}차 지원</h2>${timerHtml()}
+        <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '하고 싶은 역할을 눌러 지원하세요. 마감 전까지는 바꿀 수 있어요.'}</p></section>
+        <div class="grid">${open.map(r => {
+          const cnt = un.filter(s => picks[s.id] === r.id).length, R = rem(r.id), mine = myPick === r.id;
+          const extra = `<div class="applybar">지원 ${cnt}명 / ${R}자리 ${mine ? '<span class="mine">✅ 내가 지원했어요</span>' : ''}</div>`;
+          return roleCard({...r, slots: R}, extra, (mine ? 'picked ' : '') + (expired ? '' : 'tap'), expired ? '' : `act.pick('${r.id}')`);
+        }).join('')}</div>`;
     }
-    await set(ref(db, `competitions/${month}`), Object.keys(compObj).length ? compObj : null);
-    if (Object.keys(compObj).length) {
-      await setSession({mode:'rps', month, selectionEndsAt:0, rpsEndsAt:Date.now()+60000});
-      if (!silent) showToast('신청 마감! 경쟁 역할 가위바위보를 시작합니다.');
-      await addLog(`✊ 관리자: ${ML[month]} 신청 마감, 경쟁 역할 ${Object.keys(compObj).length}개 생성`);
+  } else if (p === 'game'){
+    const gs = Object.entries(S.games || {});
+    const myGame = gs.find(([, g]) => g.players?.[me.sid]);
+    if (myGame){
+      const [rid, g] = myGame;
+      const myCard = Object.values(g.cards || {}).find(c => c.by === me.sid);
+      let msg = myCard ? '카드를 골랐어요! 선생님이 결과를 공개할 때까지 기다려요 🤞' : '🃏 카드를 한 장 골라 주세요!';
+      if (g.revealed) msg = myCard?.win ? `🎉 축하해요! <b>${esc(S.roles[rid].name)}</b> 역할을 맡게 됐어요!` : '🍀 아쉽지만 다음 지원에서 다른 역할을 골라 봐요!';
+      body = `<div class="result-msg">${msg}</div>${gameBoard(rid, g, 'student')}`;
     } else {
-      await setSession({mode:'done', month, selectionEndsAt:0, rpsEndsAt:0});
-      if (!silent) showToast('신청 마감 및 자동 배정 완료!');
-      await addLog(`✅ 관리자: ${ML[month]} 신청 마감, 경쟁 없이 배정 완료`);
+      body = (mr ? myRoleBox(mr) : '') + `<section class="panel center"><h2>🎲 친구들이 미니게임 중이에요</h2></section>` +
+        gs.map(([rid, g]) => gameBoard(rid, g, 'view')).join('');
     }
-  } catch(e) {
-    showToast('오류: '+e.message);
-  } finally { hideLoading(); }
+  } else if (p === 'closed'){
+    body = mr ? myRoleBox(mr) + `<p class="center hint">남은 친구들의 다음 지원을 기다려요.</p>`
+      : `<section class="panel center"><h2>🙌 다음 지원을 준비하고 있어요</h2><p>남은 역할 중에서 하고 싶은 것을 미리 골라 둬요!</p></section>
+         <div class="grid">${roles().filter(r => rem(r.id) > 0).map(r => roleCard({...r, slots: rem(r.id)})).join('')}</div>`;
+  } else if (p === 'done'){
+    body = (mr ? myRoleBox(mr) : '') + resultBoard();
+  }
+  return head + stepper() + body;
 }
 
-window.submitCompetitionHand = async function(roleId, hand) {
-  if (!currentStudent) return;
-  if (sessionState.mode !== 'rps' || parseInt(sessionState.month)!==currentMonth) {
-    showToast('지금은 가위바위보 시간이 아닙니다.');
-    return;
-  }
-  const comp = getCompetition(currentMonth, roleId);
-  if (!comp || !(comp.participants||[]).includes(currentStudent)) {
-    showToast('이 경쟁에 참가 대상이 아닙니다.');
-    return;
-  }
-  showLoading('제출 중...');
-  try {
-    await set(ref(db, `competitions/${currentMonth}/${roleId}/hands/${fkey(currentStudent)}`), hand);
-    await addLog(`✋ ${currentStudent} → ${ML[currentMonth]} ${roleName(roleId)} ${HAND_LABELS[hand]} 제출`);
-    showToast('가위바위보 제출 완료!');
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-
-window.finalizeRpsRound = async function() {
-  const month = parseInt(document.getElementById('adminMonthSelect').value);
-  await finalizeAllCompetitions(month, false);
-};
-
-async function finalizeAllCompetitions(month, silent) {
-  if (sessionState.mode !== 'rps' || parseInt(sessionState.month)!==parseInt(month)) return;
-  showLoading('가위바위보 결과 반영 중...');
-  try {
-    const comps = activeCompetitionsForMonth(month);
-    const nextCompObj = {};
-    let hasNext = false;
-    for (const [roleId, comp] of Object.entries(comps)) {
-      const result = resolveCompetition(comp);
-      if (result.type === 'reround') {
-        hasNext = true;
-        nextCompObj[roleId] = {
-          participants: result.participants,
-          count: comp.count,
-          hands: {},
-          round: (comp.round||1)+1,
-          status: 'waiting'
-        };
-        await addLog(`🔁 ${ML[month]} ${roleName(roleId)} 재경기 (${result.participants.length}명)`);
-      } else if (result.type === 'final') {
-        await applyCompetitionWinners(month, roleId, result.winners, comp.participants || []);
-      }
-    }
-    await set(ref(db, `competitions/${month}`), hasNext ? nextCompObj : null);
-    if (hasNext) {
-      await setSession({mode:'rps', month, selectionEndsAt:0, rpsEndsAt:Date.now()+60000});
-      if (!silent) showToast('결과 반영 완료! 재경기가 필요한 역할이 있습니다.');
-    } else {
-      await setSession({mode:'done', month, selectionEndsAt:0, rpsEndsAt:0});
-      if (!silent) showToast('가위바위보 결과 반영 완료!');
-      await addLog(`🏁 관리자: ${ML[month]} 가위바위보 종료`);
-    }
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
+/* ---------------- 그리기 ---------------- */
+function home(){
+  return `<div class="home"><div class="logo">🙋</div><h1>우리 반 1인 1역</h1><p>역할을 토의하고, 지원하고, 함께 정해요!</p>
+    <button class="btn big primary" onclick="act.asStudent()">🧒 학생으로 들어가기</button>
+    <button class="btn big" onclick="act.asTeacher()">🧑‍🏫 선생님</button>${modeBanner()}</div>`;
 }
+function render(){
+  const a = document.activeElement;
+  if (a && a.closest && a.closest('#app') && /^(INPUT|TEXTAREA)$/.test(a.tagName)){ pending = true; return; }
+  const y = window.scrollY;
+  document.getElementById('app').innerHTML = me.role === 'teacher' ? teacherView() : me.role === 'student' ? studentView() : home();
+  window.scrollTo(0, y);
+  tick();
+}
+document.addEventListener('focusout', () => { if (pending){ pending = false; setTimeout(render, 300); } });
 
-function resolveCompetition(comp) {
-  const participants = [...(comp.participants || [])];
-  const hands = comp.hands || {};
-  const submitted = participants.filter(p => hands[fkey(p)] || hands[p]);
-  const normalized = {};
-  participants.forEach(p => {
-    normalized[p] = hands[fkey(p)] || hands[p] || null;
+let lastExpired = null;
+function tick(){
+  if (S.phase !== 'apply') return;
+  const left = Math.max(0, (S.endsAt || 0) - store.now());
+  const total = (S.duration || dur()) * 1000;
+  document.querySelectorAll('[data-timer]').forEach(el => {
+    const s = Math.ceil(left / 1000);
+    el.querySelector('.tnum').textContent = left > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : '마감!';
+    el.querySelector('.tbar i').style.width = Math.min(100, left / total * 100) + '%';
+    el.classList.toggle('hurry', left < 10000);
   });
-  const active = participants.filter(p => normalized[p]);
-  if (active.length === 0) return {type:'reround', participants};
-  const unique = [...new Set(active.map(p => normalized[p]))];
-  if (unique.length === 1 || unique.length === 3) return {type:'reround', participants: active};
-  const beats = {rock:'scissors', scissors:'paper', paper:'rock'};
-  const [a,b] = unique;
-  const winnerHand = beats[a] === b ? a : b;
-  const winners = active.filter(p => normalized[p] === winnerHand);
-  const losers = participants.filter(p => !winners.includes(p));
-  if (winners.length > comp.count) return {type:'reround', participants: winners};
-  if (winners.length < comp.count) return {type:'reround', participants};
-  return {type:'final', winners, losers};
-}
-
-async function applyCompetitionWinners(month, roleId, winners, allParticipants) {
-  const role = getRoleById(roleId);
-  await fbSetAssigned(month, roleId, winners.slice(0, role.count));
-  await set(ref(db, `oneRole/${month}/${roleId}/applicants`), null);
-  await addLog(`🏆 ${ML[month]} ${role.name}: ${winners.join(', ')} 배정`);
-}
-
-/* ─── 선발 방식 선택 & 랜덤 뽑기 미니게임 ───
-   가위바위보는 학생들이 순서/타이밍을 맞춰야 해서 실수가 잦았던 점을 보완하기 위해,
-   역할별로 관리자가 "가위바위보" 또는 "랜덤 뽑기(즉시·공정)" 중 하나를 선택할 수 있게 합니다. */
-let methodState = {}, lotteryState = {};
-
-window.openMethodModal = function(month, roleId) {
-  month = parseInt(month);
-  const role = getRoleById(roleId);
-  const comp = getCompetition(month, roleId);
-  if (!comp) { showToast('경쟁 정보를 찾을 수 없습니다.'); return; }
-  methodState = { month, roleId };
-  document.getElementById('methodDesc').textContent =
-    `"${role.icon} ${role.name}" 역할 — ${(comp.participants||[]).length}명 중 ${comp.count}명을 선발합니다. 방식을 선택하세요.`;
-  document.getElementById('methodModal').classList.add('active');
-};
-window.closeMethodModal = function() {
-  document.getElementById('methodModal').classList.remove('active');
-};
-window.chooseMethodRps = function() {
-  closeMethodModal();
-  showToast('가위바위보로 진행해요! 학생들이 각자 손모양을 제출하면 "가위바위보 결과 반영" 버튼을 눌러주세요.');
-};
-window.chooseMethodLottery = function() {
-  const { month, roleId } = methodState;
-  closeMethodModal();
-  openLotteryModal(month, roleId);
-};
-
-function openLotteryModal(month, roleId) {
-  const role = getRoleById(roleId);
-  const comp = getCompetition(month, roleId);
-  if (!comp) { showToast('경쟁 정보를 찾을 수 없습니다.'); return; }
-  lotteryState = { month, roleId, participants: [...(comp.participants||[])], needed: comp.count, winners: [] };
-  document.getElementById('lotteryDesc').textContent =
-    `"${role.icon} ${role.name}" 역할에 ${lotteryState.participants.length}명 참가, ${comp.count}명을 뽑습니다.`;
-  document.getElementById('lotteryParticipants').innerHTML =
-    lotteryState.participants.map(n => `<div class="p-chip">${n}</div>`).join('');
-  const reel = document.getElementById('lotteryReel');
-  reel.textContent = '뽑기를 시작하세요!';
-  reel.classList.remove('spinning');
-  document.getElementById('lotteryWinners').innerHTML = '';
-  document.getElementById('lotteryActions').innerHTML =
-    `<button class="action-btn btn-primary" id="lotteryStartBtn" onclick="startLotteryDraw()">🎰 뽑기 시작</button>
-     <button class="action-btn" style="background:#e8ecf0;color:#666;" onclick="closeLotteryModal()">닫기</button>`;
-  document.getElementById('lotteryModal').classList.add('active');
-}
-window.closeLotteryModal = function() {
-  document.getElementById('lotteryModal').classList.remove('active');
-};
-
-window.startLotteryDraw = function() {
-  const { participants, needed } = lotteryState;
-  if (!participants || participants.length === 0) return;
-  const btn = document.getElementById('lotteryStartBtn');
-  if (btn) btn.disabled = true;
-  const reel = document.getElementById('lotteryReel');
-  reel.classList.add('spinning');
-  const shuffled = [...participants].sort(() => Math.random() - 0.5);
-  const winners = shuffled.slice(0, needed);
-  lotteryState.winners = winners;
-  let tick = 0;
-  const totalTicks = 22;
-  const spin = setInterval(() => {
-    reel.textContent = participants[Math.floor(Math.random() * participants.length)];
-    tick++;
-    if (tick >= totalTicks) {
-      clearInterval(spin);
-      reel.classList.remove('spinning');
-      reel.textContent = '🎉 당첨자 발표!';
-      document.getElementById('lotteryWinners').innerHTML =
-        winners.map(w => `<div class="lottery-winner-chip">🏆 ${w}</div>`).join('');
-      document.getElementById('lotteryActions').innerHTML =
-        `<button class="action-btn btn-success" onclick="confirmLotteryWinners()">✅ 이 결과로 확정</button>
-         <button class="action-btn btn-warning" onclick="startLotteryDraw()">🔄 다시 뽑기</button>`;
-    }
-  }, 90);
-};
-
-window.confirmLotteryWinners = async function() {
-  const { month, roleId, winners, participants } = lotteryState;
-  showLoading('배정 중...');
-  try {
-    await applyCompetitionWinners(month, roleId, winners, participants);
-    const remaining = { ...activeCompetitionsForMonth(month) };
-    delete remaining[roleId];
-    await set(ref(db, `competitions/${month}`), Object.keys(remaining).length ? remaining : null);
-    if (!Object.keys(remaining).length && parseInt(sessionState.month) === month && sessionState.mode === 'rps') {
-      await setSession({mode:'done', month, selectionEndsAt:0, rpsEndsAt:0});
-    }
-    showToast('🎰 랜덤 뽑기 배정 완료!');
-    closeLotteryModal();
-  } catch(e) { showToast('오류: ' + e.message); }
-  finally { hideLoading(); }
-};
-
-/* ─── 화면 전환 ─── */
-window.goTo = function(screen) {
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('studentScreen').classList.remove('active');
-  document.getElementById('adminScreen').classList.remove('active');
-  if (screen==='login') {
-    document.getElementById('loginScreen').style.display='flex'; currentStudent=null;
-  } else if (screen==='student') {
-    document.getElementById('studentScreen').classList.add('active'); initStudentScreen();
-  } else if (screen==='admin') {
-    document.getElementById('adminScreen').classList.add('active'); initAdminScreen();
-  }
-};
-
-/* ─── 학생 화면 ─── */
-function initStudentScreen() {
-  currentStudent=null;
-  currentMonth=parseInt(document.getElementById('studentMonthSelect').value);
-  renderStudentGrid(); updateProgress();
-  document.getElementById('roleSelectionArea').style.display='none';
-  document.getElementById('myRoleBanner').innerHTML='';
-}
-window.onStudentMonthChange = function() {
-  currentMonth=parseInt(document.getElementById('studentMonthSelect').value);
-  currentStudent=null; renderStudentGrid();
-  document.getElementById('roleSelectionArea').style.display='none';
-  document.getElementById('myRoleBanner').innerHTML='';
-  updateProgress();
-};
-function renderStudentGrid() {
-  const grid=document.getElementById('studentGrid'); grid.innerHTML='';
-  STUDENTS.forEach(name=>{
-    const btn=document.createElement('button');
-    btn.className='student-name-btn'+(currentStudent===name?' selected':'');
-    btn.textContent=name; btn.onclick=()=>selectStudent(name);
-    grid.appendChild(btn);
-  });
-}
-function selectStudent(name) {
-  currentStudent=name; renderStudentGrid();
-  const myA=getAssignedRole(name,currentMonth);
-  if (myA) { showMyRoleBanner(myA); document.getElementById('roleSelectionArea').style.display='none'; return; }
-  document.getElementById('myRoleBanner').innerHTML='';
-  document.getElementById('roleSelectionArea').style.display='block';
-  document.getElementById('roleSelectionTitle').textContent=`${name} 학생 - ${ML[currentMonth]} 역할 선택`;
-  document.getElementById('roleSelectionDesc').textContent='현재 운영 단계에 따라 신청 또는 대기 상태가 달라집니다. 1분 선택 시간에만 신청할 수 있습니다.';
-  renderRolesGrid(); renderSubmitArea();
-}
-const getAssignedRole = (name,m) => ROLES.find(r=>state[m]?.[r.id]?.assigned?.includes(name)) ?? null;
-const getAppliedRole  = (name,m) => ROLES.find(r=>state[m]?.[r.id]?.applicants?.includes(name)) ?? null;
-
-function showMyRoleBanner(role) {
-  document.getElementById('myRoleBanner').innerHTML=`
-    <div class="my-role-banner">
-      <div class="icon">${role.icon}</div>
-      <div>
-        <h3 style="font-size:1rem;opacity:.9;">${ML[currentMonth]} 배정 완료!</h3>
-        <p style="font-size:1.35rem;font-weight:700;">${role.name}</p>
-        <div style="font-size:.83rem;opacity:.8;margin-top:3px;">활동 시간: ${role.time}</div>
-      </div>
-    </div>`;
-}
-function renderRolesGrid() {
-  const grid=document.getElementById('rolesGrid'); if(!grid) return; grid.innerHTML='';
-  const appliedRole=currentStudent?getAppliedRole(currentStudent,currentMonth):null;
-  const canSelectNow = sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth;
-  ROLES.forEach(role=>{
-    const d=state[currentMonth]?.[role.id]??{applicants:[],assigned:[]};
-    const applicants=d.applicants||[], assigned=d.assigned||[];
-    const comp = getCompetition(currentMonth, role.id);
-    const isFullA=assigned.length>=role.count;
-    const isApplied=applicants.includes(currentStudent);
-    const isMyA=assigned.includes(currentStudent);
-    const isCompetitive = !!comp || applicants.length>role.count;
-    const hasOther=appliedRole&&appliedRole.id!==role.id;
-    const card=document.createElement('div');
-    card.className='role-select-card';
-    let sh='', clickable=canSelectNow;
-    if (isMyA||isFullA) {
-      card.classList.add('r-assigned');
-      sh=`<div style="font-size:.7rem;color:#4CAF50;font-weight:600;margin-top:3px;">✅ ${isMyA?'배정됨':'배정 완료'}</div>`;
-      clickable=false;
-    } else if (isApplied) {
-      card.classList.add('r-selected');
-      sh=`<div style="font-size:.7rem;color:#EA8300;font-weight:600;margin-top:3px;">✔ 신청됨</div>`;
-    } else if (isCompetitive) {
-      card.classList.add('r-full');
-      sh=`<div style="font-size:.7rem;color:#ff9800;font-weight:600;margin-top:3px;">⚡ 경쟁 예정/진행 중 (${applicants.length}/${role.count})</div>`;
-    } else if (hasOther) {
-      card.classList.add('disabled');
-      sh=`<div class="r-count">${applicants.length}/${role.count}명 신청</div>`; clickable=false;
-    } else {
-      sh=`<div class="r-count">${applicants.length}/${role.count}명 신청</div>`;
-    }
-    if (!canSelectNow && !isApplied) clickable=false;
-    card.innerHTML=`<div class="r-icon">${role.icon}</div><div class="r-title">${role.name}</div><div class="r-time">${role.time}</div>${sh}`;
-    if (clickable&&currentStudent) card.onclick=()=>toggleApply(role.id);
-    else if (!canSelectNow) card.title='지금은 신청 시간이 아닙니다.';
-    grid.appendChild(card);
-  });
-}
-async function toggleApply(roleId) {
-  if (!currentStudent) return;
-  if (!(sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth)) {
-    showToast('지금은 역할 신청 시간이 아닙니다.');
-    return;
-  }
-  const d=state[currentMonth][roleId];
-  const role=ROLES.find(r=>r.id===roleId);
-  const appliedRole=getAppliedRole(currentStudent,currentMonth);
-  if (appliedRole&&appliedRole.id!==roleId) { showToast('이미 다른 역할을 신청했습니다.'); return; }
-  showLoading('처리 중...');
-  try {
-    if (d.applicants.includes(currentStudent)) {
-      await fbRemoveApplicant(currentMonth,roleId,currentStudent);
-      showToast(`${role.name} 신청 취소`);
-    } else {
-      await fbAddApplicant(currentMonth,roleId,currentStudent);
-      showToast(`${role.name} 신청 완료!`);
-    }
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-}
-function renderSubmitArea() {
-  const area=document.getElementById('submitArea'); if(!area||!currentStudent) return;
-  const applied=getAppliedRole(currentStudent,currentMonth);
-  const canSelectNow = sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth;
-  if (applied) {
-    const ov=(state[currentMonth][applied.id].applicants||[]).length>applied.count || !!getCompetition(currentMonth, applied.id);
-    area.innerHTML=`
-      <div style="background:#f0faff;border-radius:12px;padding:14px;margin-bottom:14px;">
-        <span style="font-size:.88rem;color:#555;">신청한 역할: <strong>${applied.icon} ${applied.name}</strong>
-          ${ov?`<span class="waiting-badge" style="margin-left:7px;">경쟁 대상</span>`:''}
-        </span>
-      </div>
-      ${canSelectNow?`<button class="action-btn btn-danger" onclick="cancelApply()">❌ 신청 취소</button>`:`<p class="mini-note">신청 시간 종료 후에는 취소할 수 없습니다.</p>`}`;
-  } else {
-    area.innerHTML=`<p style="color:#aaa;font-size:.88rem;">${canSelectNow?'역할을 선택해주세요.':'관리자가 역할 선택을 시작하면 신청할 수 있습니다.'}</p>`;
+  if (left <= 0){
+    if (me.role === 'teacher') act.closeRound();
+    else if (lastExpired !== S.round + ':' + S.endsAt){ lastExpired = S.round + ':' + S.endsAt; render(); }
   }
 }
-window.cancelApply = async function() {
-  if (!currentStudent) return;
-  if (!(sessionState.mode==='selection' && parseInt(sessionState.month)===currentMonth)) {
-    showToast('지금은 신청 취소가 불가능합니다.');
-    return;
-  }
-  const applied=getAppliedRole(currentStudent,currentMonth); if(!applied) return;
-  showLoading('취소 중...');
-  try { await fbRemoveApplicant(currentMonth,applied.id,currentStudent); showToast('신청이 취소되었습니다.'); }
-  catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-function updateProgress() {
-  let assigned=0,total=0;
-  ROLES.forEach(r=>{ total+=r.count; assigned+=Math.min((state[currentMonth]?.[r.id]?.assigned||[]).length,r.count); });
-  const pct=total>0?Math.round(assigned/total*100):0;
-  const bar=document.getElementById('progressBar');
-  const lbl=document.getElementById('progressLabel');
-  if(bar) bar.style.width=pct+'%';
-  if(lbl) lbl.textContent=`${assigned}/${total}명 배정 완료 (${pct}%)`;
-}
+setInterval(tick, 250);
 
-/* ─── 가위바위보 ─── */
-function openRpsModal(roleId) {
-  const role=ROLES.find(r=>r.id===roleId);
-  const participants=[...state[currentMonth][roleId].applicants];
-  rpsState={roleId,participants,results:{},currentIdx:0,needed:role.count};
-  document.getElementById('rpsDesc').textContent=`"${role.name}" 역할에 ${participants.length}명 신청 (${role.count}명 필요). 순서대로 선택하세요!`;
-  renderRpsParticipants(); renderRpsContent();
-  document.getElementById('rpsModal').classList.add('active');
-}
-function renderRpsParticipants() {
-  document.getElementById('rpsParticipants').innerHTML=rpsState.participants.map((n,i)=>{
-    const done=rpsState.results[n]!==undefined, cur=i===rpsState.currentIdx;
-    return `<div class="p-chip${cur?' current':''}${done?' done':''}">${n}${done?' '+rpsState.results[n]:''}</div>`;
-  }).join('');
-}
-function renderRpsContent() {
-  const content=document.getElementById('rpsContent');
-  if (rpsState.currentIdx<rpsState.participants.length) {
-    const cur=rpsState.participants[rpsState.currentIdx];
-    content.innerHTML=`
-      <p style="font-weight:600;color:#333;margin-bottom:14px;">${cur} 학생의 차례</p>
-      <div class="rps-buttons">
-        <button class="rps-btn" onclick="selectRps('✊')">✊</button>
-        <button class="rps-btn" onclick="selectRps('✌️')">✌️</button>
-        <button class="rps-btn" onclick="selectRps('🖐️')">🖐️</button>
-      </div>
-      <p style="font-size:.78rem;color:#aaa;">✊ 주먹 &nbsp; ✌️ 가위 &nbsp; 🖐️ 보</p>`;
-  } else { calcRpsResult(); }
-}
-window.selectRps = function(choice) {
-  rpsState.results[rpsState.participants[rpsState.currentIdx]]=choice;
-  rpsState.currentIdx++; renderRpsParticipants(); renderRpsContent();
-};
-function calcRpsResult() {
-  const {results,participants,needed}=rpsState;
-  const score={'✊':0,'✌️':1,'🖐️':2};
-  const choices=participants.map(p=>score[results[p]]);
-  const unique=[...new Set(choices)];
-  let winners=[],losers=[];
-  if (unique.length===1||unique.length===3) { winners=[...participants]; }
-  else {
-    const [a,b]=unique; const beats={0:1,1:2,2:0};
-    const wc=beats[a]===b?a:b;
-    participants.forEach(p=>(score[results[p]]===wc?winners:losers).push(p));
-  }
-  const summary=participants.map(p=>`${p}:${results[p]}`).join(' | ');
-  const content=document.getElementById('rpsContent');
-  if (winners.length===participants.length) {
-    content.innerHTML=`<div class="rps-result rps-draw">🤝 비겼습니다! 다시 하세요.</div>
-      <div style="margin-bottom:14px;font-size:.83rem;color:#888;">${summary}</div>
-      <button class="action-btn btn-warning" onclick="retryRps()">🔄 다시 하기</button>`;
-  } else if (winners.length<=needed) {
-    let final=[...winners];
-    if (final.length<needed) final=final.concat(losers.sort(()=>Math.random()-.5).slice(0,needed-final.length));
-    const finalLosers=participants.filter(p=>!final.includes(p));
-    doAssignRpsWinners(final,finalLosers,summary);
-  } else {
-    content.innerHTML=`<div class="rps-result rps-draw">⚡ 승자 ${winners.length}명 → 승자끼리 다시!</div>
-      <div style="margin-bottom:14px;font-size:.83rem;color:#888;">${summary}</div>
-      <button class="action-btn btn-warning" onclick='retryRpsWithWinners(${JSON.stringify(winners)})'>🔄 승자끼리 다시</button>`;
-  }
-}
-window.retryRps = function() { rpsState.results={}; rpsState.currentIdx=0; renderRpsParticipants(); renderRpsContent(); };
-window.retryRpsWithWinners = function(w) {
-  rpsState.participants=w; rpsState.results={}; rpsState.currentIdx=0;
-  document.getElementById('rpsDesc').textContent=`승자끼리 다시! (${w.length}명 중 ${rpsState.needed}명 선발)`;
-  renderRpsParticipants(); renderRpsContent();
-};
-async function doAssignRpsWinners(winners,losers,summary) {
-  const {roleId}=rpsState; const role=ROLES.find(r=>r.id===roleId);
-  showLoading('배정 중...');
-  try {
-    for (const l of losers) await remove(ref(db,`oneRole/${currentMonth}/${roleId}/applicants/${fkey(l)}`));
-    const cur=state[currentMonth][roleId].assigned||[];
-    await fbSetAssigned(currentMonth,roleId,[...new Set([...cur,...winners])]);
-    for (const w of winners) await remove(ref(db,`oneRole/${currentMonth}/${roleId}/applicants/${fkey(w)}`));
-    await addLog(`🏆 가위바위보: ${winners.join(', ')} → ${ML[currentMonth]} ${role.name} 배정`);
-    document.getElementById('rpsContent').innerHTML=`
-      <div class="rps-result rps-win">🎉 ${winners.join(', ')} 학생이 "${role.name}" 역할을 맡게 되었습니다!</div>
-      <div style="margin-bottom:14px;font-size:.83rem;color:#888;">${summary}</div>
-      <button class="action-btn btn-primary" onclick="closeRpsModal()">확인</button>`;
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-}
-window.closeRpsModal = function() {
-  document.getElementById('rpsModal').classList.remove('active');
-  if (currentStudent) { const myA=getAssignedRole(currentStudent,currentMonth); if(myA) showMyRoleBanner(myA); }
-};
-
-/* ─── 관리자 화면 ─── */
-function initAdminScreen() {
-  renderStats(); renderAdminSessionBox(); renderOverview(); renderMonthSelectBtns(); renderMonthlyTable(); renderStudentStatus(); renderManageTable(); renderRolesManage();
-}
-function renderStats() {
-  const grid=document.getElementById('statsGrid'); if(!grid) return;
-  let ta=0,ts=0,tap=0;
-  MONTHS.forEach(m=>ROLES.forEach(r=>{ ts+=r.count; ta+=(state[m]?.[r.id]?.assigned||[]).length; tap+=(state[m]?.[r.id]?.applicants||[]).length; }));
-  grid.innerHTML=`
-    <div class="stat-card"><div class="stat-number">${STUDENTS.length}</div><div class="stat-label">전체 학생</div></div>
-    <div class="stat-card"><div class="stat-number">${MONTHS.length}</div><div class="stat-label">운영 개월</div></div>
-    <div class="stat-card"><div class="stat-number">${ta}</div><div class="stat-label">배정 완료</div></div>
-    <div class="stat-card"><div class="stat-number">${ts}</div><div class="stat-label">전체 슬롯</div></div>
-    <div class="stat-card"><div class="stat-number">${tap}</div><div class="stat-label">신청 대기</div></div>`;
-}
-function renderOverview() {
-  const month=parseInt(document.getElementById('adminMonthSelect').value);
-  adminCurrentMonth=month;
-  const grid=document.getElementById('overviewGrid'); if(!grid) return; grid.innerHTML='';
-  ROLES.forEach(role=>{
-    const d=state[month]?.[role.id]??{applicants:[],assigned:[]};
-    const applicants=d.applicants||[], assigned=d.assigned||[];
-    const card=document.createElement('div'); card.className='role-card';
-    if (assigned.length>0) card.classList.add('has-assigned');
-    else if (applicants.length>=role.count) card.classList.add('full-applied');
-    else if (applicants.length>0) card.classList.add('has-applicants');
-    const comp = getCompetition(month, role.id);
-    const submitted = comp ? Object.keys(comp.hands||{}).length : 0;
-    card.innerHTML=`
-      <div class="role-card-header">
-        <span class="role-name">${role.icon} ${role.name}</span>
-        <span class="role-badge">${assigned.length}/${role.count}명</span>
-      </div>
-      <div class="role-time">⏰ ${role.time}</div>
-      ${comp?`<div style="margin:6px 0 8px;color:#d35400;font-size:.8rem;font-weight:700;">✊ 경쟁 진행 중 · 제출 ${submitted}/${(comp.participants||[]).length}</div>`:''}
-      ${assigned.length>0?`<div style="margin-bottom:6px;">${assigned.map(a=>`<span class="assigned-tag">✅ ${a}</span>`).join('')}</div>`:''}
-      <div class="applicants">${applicants.length>0?applicants.map(a=>`<span class="applicant-tag">📝 ${a}</span>`).join(''):'<span class="no-applicant">신청자 없음</span>'}</div>`;
-    grid.appendChild(card);
-  });
-}
-window.autoAssignRandom = async function() {
-  const month=adminCurrentMonth; showLoading('랜덤 배정 중...');
-  try {
-    const taken=new Set();
-    ROLES.forEach(r=>{ (state[month]?.[r.id]?.assigned||[]).forEach(s=>taken.add(s)); (state[month]?.[r.id]?.applicants||[]).forEach(s=>taken.add(s)); });
-    let pool=STUDENTS.filter(s=>!taken.has(s)).sort(()=>Math.random()-.5); let idx=0;
-    for (const role of ROLES) {
-      const d=state[month]?.[role.id]??{assigned:[],applicants:[]};
-      const needed=role.count-(d.assigned||[]).length;
-      if (needed>0) {
-        const toAdd=[];
-        for (let i=0;i<needed&&idx<pool.length;i++,idx++) toAdd.push(pool[idx]);
-        if (toAdd.length>0) await fbSetAssigned(month,role.id,[...(d.assigned||[]),...toAdd]);
-      }
-    }
-    await addLog(`🎲 관리자: ${ML[month]} 미배정 랜덤 배정 완료`);
-    showToast('랜덤 배정 완료!');
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-window.assignAll = async function() {
-  const month=adminCurrentMonth; showLoading('자동 확정 중...');
-  try {
-    for (const role of ROLES) {
-      const d=state[month]?.[role.id]??{assigned:[],applicants:[]};
-      const needed=role.count-(d.assigned||[]).length;
-      if (needed>0&&(d.applicants||[]).length>0) {
-        const toA=d.applicants.slice(0,needed), rem=d.applicants.slice(needed);
-        await fbSetAssigned(month,role.id,[...(d.assigned||[]),...toA]);
-        const obj={}; rem.forEach(s=>{obj[fkey(s)]=s;});
-        await set(ref(db,`oneRole/${month}/${role.id}/applicants`),Object.keys(obj).length>0?obj:null);
-      }
-    }
-    await addLog(`✅ 관리자: ${ML[month]} 신청자 자동 확정`);
-    showToast('자동 확정 완료!');
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-function renderMonthSelectBtns() {
-  const area=document.getElementById('monthSelectBtns'); if(!area) return; area.innerHTML='';
-  MONTHS.forEach(m=>{
-    const btn=document.createElement('button');
-    btn.className='month-btn'+(m===selectedMonthForTable?' active':'');
-    btn.textContent=ML[m];
-    btn.onclick=()=>{ selectedMonthForTable=m; renderMonthSelectBtns(); renderMonthlyTable(); };
-    area.appendChild(btn);
-  });
-}
-function renderMonthlyTable() {
-  const area=document.getElementById('monthlyTable'); if(!area) return;
-  const m=selectedMonthForTable;
-  let html=`<table class="month-table"><thead><tr><th>역할</th><th>활동 시간</th><th>필요 인원</th><th>배정된 학생</th><th>신청 대기</th></tr></thead><tbody>`;
-  ROLES.forEach(r=>{
-    const d=state[m]?.[r.id]??{assigned:[],applicants:[]};
-    html+=`<tr><td>${r.icon} ${r.name}</td><td>${r.time}</td><td>${r.count}명</td>
-      <td style="color:#4CAF50;font-weight:600;">${(d.assigned||[]).join(', ')||'-'}</td>
-      <td style="color:#2196F3;">${(d.applicants||[]).join(', ')||'-'}</td></tr>`;
-  });
-  area.innerHTML=html+'</tbody></table>';
-}
-function renderStudentStatus() {
-  const area=document.getElementById('studentStatusGrid'); if(!area) return;
-  let html=`<table class="month-table"><thead><tr><th>학생</th>`;
-  MONTHS.forEach(m=>{html+=`<th>${ML[m]}</th>`;});
-  html+='</tr></thead><tbody>';
-  STUDENTS.forEach(name=>{
-    html+=`<tr><td style="font-weight:600;white-space:nowrap;">${name}</td>`;
-    MONTHS.forEach(m=>{
-      const a=ROLES.find(r=>state[m]?.[r.id]?.assigned?.includes(name));
-      const p=ROLES.find(r=>state[m]?.[r.id]?.applicants?.includes(name));
-      if(a) html+=`<td><span class="assigned-month-badge">${a.icon} ${a.name}</span></td>`;
-      else if(p) html+=`<td><span style="font-size:.73rem;color:#2196F3;">📝 ${p.name}</span></td>`;
-      else html+=`<td style="color:#ddd;">-</td>`;
-    });
-    html+='</tr>';
-  });
-  area.innerHTML=html+'</tbody></table>';
-}
-window.renderManageTable = function() {
-  const month=parseInt(document.getElementById('manageMonthSelect').value);
-  manageCurrentMonth=month;
-  const area=document.getElementById('manageTable'); if(!area) return;
-  let html=`<table class="month-table"><thead><tr><th>역할</th><th>활동 시간</th><th>슬롯</th><th>배정 학생</th><th>수정</th></tr></thead><tbody>`;
-  ROLES.forEach(r=>{
-    const d=state[month]?.[r.id]??{assigned:[]};
-    for(let slot=0;slot<r.count;slot++){
-      const student=(d.assigned||[])[slot]||'-';
-      html+=`<tr><td>${r.icon} ${r.name}</td><td>${r.time}</td><td>${slot+1}번</td>
-        <td style="font-weight:600;color:${student!=='-'?'#4CAF50':'#ccc'};">${student}</td>
-        <td><button class="action-btn btn-primary" style="padding:5px 11px;font-size:.78rem;"
-          onclick="openEditModal(${month},'${r.id}',${slot})">✏️ 수정</button></td></tr>`;
-    }
-  });
-  area.innerHTML=html+'</tbody></table>';
-};
-window.openEditModal = function(month,roleId,slot) {
-  editState={month,roleId,slot};
-  const role=ROLES.find(r=>r.id===roleId);
-  const current=(state[month]?.[roleId]?.assigned||[])[slot]||'';
-  document.getElementById('editDesc').textContent=`${ML[month]} - ${role.name} (${slot+1}번 슬롯)`;
-  const sel=document.getElementById('editSelect');
-  sel.innerHTML='<option value="">-- 미배정 --</option>';
-  STUDENTS.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; if(s===current) o.selected=true; sel.appendChild(o); });
-  document.getElementById('editModal').classList.add('active');
-};
-window.saveEdit = async function() {
-  const {month,roleId,slot}=editState;
-  const ns=document.getElementById('editSelect').value;
-  showLoading('저장 중...');
-  try {
-    const assigned=[...(state[month]?.[roleId]?.assigned||[])];
-    while(assigned.length<=slot) assigned.push('');
-    assigned[slot]=ns;
-    await fbSetAssigned(month,roleId,assigned.filter(s=>s!==''));
-    await addLog(`✏️ 관리자: ${ML[month]} ${roleName(roleId)} ${slot+1}번 → ${ns||'미배정'}`);
-    closeEditModal(); renderManageTable(); showToast('배정 수정 완료!');
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-window.closeEditModal = function() { document.getElementById('editModal').classList.remove('active'); };
-window.resetMonth = async function() {
-  if(!confirm(`${ML[manageCurrentMonth]} 배정을 초기화하시겠습니까?`)) return;
-  showLoading('초기화 중...');
-  try { await fbClearMonth(manageCurrentMonth); await set(ref(db,`competitions/${manageCurrentMonth}`), null); if(parseInt(sessionState.month)===manageCurrentMonth) await setSession({mode:'idle', month:manageCurrentMonth, selectionEndsAt:0, rpsEndsAt:0}); await addLog(`🗑️ 관리자: ${ML[manageCurrentMonth]} 초기화`); showToast(`${ML[manageCurrentMonth]} 초기화 완료`); }
-  catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-window.resetAllData = async function() {
-  if(!confirm('전체 데이터를 초기화하시겠습니까? 되돌릴 수 없습니다.')) return;
-  showLoading('전체 초기화 중...');
-  try { await fbClearAll(); await set(ref(db,'competitions'), null); await setSession({mode:'idle', month:6, selectionEndsAt:0, rpsEndsAt:0}); showToast('전체 초기화 완료'); }
-  catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-
-/* ─── 역할 관리 (추가·수정·삭제·고정) ─── */
-let roleFormState = { editingId: null };
-
-function renderRolesManage() {
-  const area = document.getElementById('rolesManageList');
-  if (!area) return;
-  area.innerHTML = ROLES.map(r => `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border:2px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span style="font-size:1.5rem;">${r.icon}</span>
-        <div>
-          <div style="font-weight:700;color:var(--ink);">${r.name} ${r.locked?'<span title="고정된 역할" style="font-size:.8rem;">🔒</span>':''}</div>
-          <div class="mini-note">${r.time} · ${r.count}명</div>
-        </div>
-      </div>
-      <div>
-        <button class="action-btn" style="padding:7px 12px;font-size:.78rem;margin:3px;background:#e8ecf0;color:#555;" onclick="toggleRoleLock('${r.id}')">${r.locked?'🔓 잠금 해제':'🔒 고정하기'}</button>
-        <button class="action-btn btn-primary" style="padding:7px 12px;font-size:.78rem;margin:3px;" onclick="openRoleForm('${r.id}')">✏️ 수정</button>
-        <button class="action-btn btn-danger" style="padding:7px 12px;font-size:.78rem;margin:3px;${r.locked?'opacity:.45;cursor:not-allowed;':''}" onclick="deleteRole('${r.id}')">🗑️ 삭제</button>
-      </div>
-    </div>`).join('');
-}
-
-window.toggleRoleLock = async function(roleId) {
-  const r = ROLES.find(x=>x.id===roleId);
-  if (!r) return;
-  try {
-    await set(ref(db, `rolesConfig/${roleId}/locked`), !r.locked);
-    await addLog(`${r.locked?'🔓':'🔒'} 관리자: "${r.name}" ${r.locked?'잠금 해제':'고정'}`);
-  } catch(e) { showToast('오류: '+e.message); }
-};
-
-window.openRoleForm = function(roleId) {
-  roleFormState.editingId = roleId;
-  const isEdit = !!roleId;
-  document.getElementById('roleFormTitle').textContent = isEdit ? '✏️ 역할 수정' : '➕ 새 역할 추가';
-  if (isEdit) {
-    const r = ROLES.find(x=>x.id===roleId);
-    if (!r) return;
-    document.getElementById('roleFormIcon').value  = r.icon;
-    document.getElementById('roleFormName').value  = r.name;
-    document.getElementById('roleFormTime').value  = r.time;
-    document.getElementById('roleFormCount').value = r.count;
-  } else {
-    document.getElementById('roleFormIcon').value  = '';
-    document.getElementById('roleFormName').value  = '';
-    document.getElementById('roleFormTime').value  = '수시';
-    document.getElementById('roleFormCount').value = 1;
-  }
-  document.getElementById('roleFormModal').classList.add('active');
-};
-window.closeRoleFormModal = function() {
-  document.getElementById('roleFormModal').classList.remove('active');
-};
-
-window.saveRoleForm = async function() {
-  const icon  = document.getElementById('roleFormIcon').value.trim() || '📌';
-  const name  = document.getElementById('roleFormName').value.trim();
-  const time  = document.getElementById('roleFormTime').value.trim() || '수시';
-  const count = Math.max(1, Math.min(10, parseInt(document.getElementById('roleFormCount').value) || 1));
-  if (!name) { showToast('역할 이름을 입력해주세요.'); return; }
-  showLoading('저장 중...');
-  try {
-    const editingId = roleFormState.editingId;
-    if (editingId) {
-      const prev = ROLES.find(x=>x.id===editingId);
-      if (!prev) throw new Error('역할을 찾을 수 없습니다.');
-      await set(ref(db, `rolesConfig/${editingId}`), {name, icon, time, count, locked:!!prev.locked, order:prev.order??0});
-      let removed = [];
-      if (count < prev.count) removed = await enforceRoleCount(editingId, count);
-      await addLog(`✏️ 관리자: 역할 "${name}" 수정`);
-      closeRoleFormModal();
-      showToast(removed.length ? `역할 수정 완료! 인원 축소로 배정 해제된 학생: ${removed.join(', ')}` : '역할이 수정되었습니다.');
-    } else {
-      const newId = 'r' + Date.now().toString(36);
-      const order = ROLES.length;
-      await set(ref(db, `rolesConfig/${newId}`), {name, icon, time, count, locked:false, order});
-      for (const m of MONTHS) await set(ref(db, `oneRole/${m}/${newId}`), {applicants:{}, assigned:{}});
-      await addLog(`➕ 관리자: 새 역할 "${name}" 추가`);
-      closeRoleFormModal();
-      showToast('새 역할이 추가되었습니다.');
-    }
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-
-window.deleteRole = async function(roleId) {
-  const r = ROLES.find(x=>x.id===roleId);
-  if (!r) return;
-  if (r.locked) { showToast('🔒 고정된 역할이에요. 잠금을 해제한 뒤 삭제할 수 있어요.'); return; }
-  if (!confirm(`"${r.name}" 역할을 삭제하면 모든 달의 배정·신청 정보가 함께 사라져요. 계속할까요?`)) return;
-  showLoading('삭제 중...');
-  try {
-    const removedNames = await clearRoleAssignmentsEverywhere(roleId);
-    await set(ref(db, `rolesConfig/${roleId}`), null);
-    for (const m of MONTHS) await set(ref(db, `oneRole/${m}/${roleId}`), null);
-    await addLog(`🗑️ 관리자: 역할 "${r.name}" 삭제`);
-    showToast(removedNames.length ? `역할 삭제 완료! 배정 해제된 학생: ${removedNames.join(', ')}` : '역할이 삭제되었습니다.');
-  } catch(e) { showToast('오류: '+e.message); }
-  finally { hideLoading(); }
-};
-
-async function clearRoleAssignmentsEverywhere(roleId) {
-  const removed = new Set();
-  MONTHS.forEach(m => {
-    const d = state[m]?.[roleId];
-    if (d) {
-      (d.assigned||[]).forEach(n=>removed.add(n));
-      (d.applicants||[]).forEach(n=>removed.add(n));
-    }
-  });
-  return [...removed];
-}
-
-async function enforceRoleCount(roleId, newCount) {
-  const removed = [];
-  for (const m of MONTHS) {
-    const d = state[m]?.[roleId];
-    if (d && (d.assigned||[]).length > newCount) {
-      const kept = d.assigned.slice(0, newCount);
-      const cut  = d.assigned.slice(newCount);
-      removed.push(...cut);
-      await fbSetAssigned(m, roleId, kept);
-    }
-  }
-  return removed;
-}
-
-/* ─── 다운로드 ─── */
-window.downloadCSV = function() {
-  const m=selectedMonthForTable;
-  let csv='\uFEFF역할,활동시간,필요인원,배정학생1,배정학생2\n';
-  ROLES.forEach(r=>{ const d=state[m]?.[r.id]??{assigned:[]}; csv+=`"${r.name}","${r.time}","${r.count}명","${(d.assigned||[])[0]||''}","${(d.assigned||[])[1]||''}"\n`; });
-  dlFile(csv,`1인1역_${ML[m]}.csv`); showToast(`${ML[m]} CSV 다운로드!`);
-};
-window.downloadAllMonths = function() {
-  let csv='\uFEFF월,역할,활동시간,필요인원,배정학생1,배정학생2\n';
-  MONTHS.forEach(m=>ROLES.forEach(r=>{ const d=state[m]?.[r.id]??{assigned:[]}; csv+=`"${ML[m]}","${r.name}","${r.time}","${r.count}명","${(d.assigned||[])[0]||''}","${(d.assigned||[])[1]||''}"\n`; }));
-  dlFile(csv,'1인1역_전체.csv'); showToast('전체 월 CSV 다운로드!');
-};
-function dlFile(content,filename) {
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8;'})),download:filename});
-  a.click(); URL.revokeObjectURL(a.href);
-}
-
-/* ─── 탭 전환 ─── */
-window.switchTab = function(tabId,btn) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.getElementById('tab-'+tabId).classList.add('active');
-  if(btn) btn.classList.add('active');
-  if(tabId==='monthly'){renderMonthSelectBtns();renderMonthlyTable();}
-  if(tabId==='students') renderStudentStatus();
-  if(tabId==='manage')   renderManageTable();
-  if(tabId==='overview') renderOverview();
-  if(tabId==='roles')    renderRolesManage();
-};
-
-/* ─── 실시간 로그 패널 ─── */
-window.toggleRtPanel = function() {
-  rtPanelOpen=!rtPanelOpen;
-  document.getElementById('rtPanel').classList.toggle('hidden',!rtPanelOpen);
-};
-function renderRtLog() {
-  const area=document.getElementById('rtLog'); if(!area) return;
-  if(rtLogs.length===0){ area.innerHTML='<div class="rt-item"><span class="rt-msg" style="color:#aaa;">활동 없음</span></div>'; return; }
-  area.innerHTML=rtLogs.map(log=>{
-    const d=new Date(log.ts);
-    const t=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    return `<div class="rt-item"><span class="rt-time">${t}</span><span class="rt-msg">${log.msg}</span></div>`;
-  }).join('');
-}
-
-/* ─── UI 유틸 ─── */
-function setStatus(type,text) {
-  const el=document.getElementById('fbStatus');
-  const dot=document.getElementById('statusDot');
-  const txt=document.getElementById('statusText');
-  if(!el) return;
-  el.className=`firebase-status s-${type}`;
-  dot.className=`status-dot dot-${type}`;
-  txt.textContent=text;
-}
-function showLoading(text='처리 중...') {
-  document.getElementById('loadingText').textContent=text;
-  document.getElementById('loadingOverlay').classList.add('show');
-}
-function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
-function showToast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2600);
-}
-window.addEventListener('online',()=>{ const b=document.getElementById('connBar'); b.className='conn-bar online'; b.textContent='✅ 인터넷 연결됨'; setTimeout(()=>{b.className='conn-bar';},3000); });
-window.addEventListener('offline',()=>{ const b=document.getElementById('connBar'); b.className='conn-bar offline'; b.textContent='⚠️ 인터넷 연결 끊김'; });
-
-/* ─── 시작 ─── */
-showLoading('Firebase 연결 중...');
-initFirebase();
+store.subscribe(v => { S = v || {}; loaded = true; render(); });
+render();
 </script>
 </body>
 </html>
