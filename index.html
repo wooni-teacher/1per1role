@@ -69,6 +69,12 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .me{display:flex;align-items:center;gap:8px;justify-content:flex-end}.link{border:none;background:none;color:#8a8070;text-decoration:underline;font:inherit;cursor:pointer}
 .time{margin-top:18px;color:#d9661c}
 .rrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px;border-bottom:1px dashed #eee}.rrow .em{font-size:1.6rem}.rrow .rdesc{color:#8a8070;font-size:.9rem;flex:1;min-width:140px}.rrow .names{margin:0}
+.inp{width:100%;font:inherit;font-size:1.05rem;border:2px solid #eadfcb;border-radius:12px;padding:10px;background:#fffdf8}
+.inp:focus{outline:none;border-color:#ff8a3d}
+.prop{position:relative}.prop .by{font-size:.85rem;color:#8a8070;margin-top:6px}
+.prop.adopted{border-color:#5cc98b;background:#f3fcf6}
+.likebtn{font:inherit;font-weight:800;border:2px solid #eadfcb;background:#fff;border-radius:999px;padding:6px 14px;cursor:pointer;color:#2b2b3a}
+.likebtn.on{background:#ffe3ec;border-color:#ff7aa2;color:#d6336c}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#2b2b3a;color:#fff;padding:12px 20px;border-radius:999px;z-index:9;font-weight:700}
 .qr{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.qr code{background:#f5efe3;padding:6px 10px;border-radius:8px;word-break:break-all}
 .thead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
@@ -159,7 +165,7 @@ catch(e){ console.error(e); store = makeLocalStore(); }
 
 /* ---------------- 상태 ---------------- */
 let S = {}, loaded = false, closing = false, initDone = false, pending = false;
-const ui = { bigView: false };
+const ui = { bigView: false, draft: {name: '', desc: '', reason: '', time: '쉬는 시간', slots: 1} };
 const me = { role: null, sid: null };
 try {
   if (params.get('mode') === 'student') me.role = 'student';
@@ -185,11 +191,14 @@ function toast(msg){
   document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
 }
 
-function defaultsMap(){
-  const up = {};
+function exampleRolesMap(up = {}){
   DEFAULT_ROLES.forEach((d, i) => {
     up['roles/r' + String(i + 1).padStart(2, '0')] = {emoji: d[0], name: d[1], desc: d[2], reason: d[3], time: d[4], slots: d[5], order: i};
   });
+  return up;
+}
+function defaultsMap(){
+  const up = {};
   DEFAULT_NAMES.forEach((n, i) => up['students/s' + String(i + 1).padStart(2, '0')] = {no: i + 1, name: n});
   up.phase = 'setup'; up['settings/duration'] = 180;
   return up;
@@ -313,10 +322,35 @@ const act = {
   },
   resetAll(){
     if (!confirm('역할·명단·결과를 모두 지우고 기본값으로 되돌릴까요?')) return;
-    store.update(Object.assign({roles: null, students: null, assigned: null, picks: null, games: null, round: null, endsAt: null}, {}))
+    store.update(Object.assign({roles: null, students: null, proposals: null, assigned: null, picks: null, games: null, round: null, endsAt: null}, {}))
       .then(() => store.update(defaultsMap()));
   },
-  print(){ window.print(); }
+  print(){ window.print(); },
+
+  loadExamples(){ if (confirm('예시 역할 11개를 추가할까요?')) store.update(exampleRolesMap()); },
+  draftSlot(d){ ui.draft.slots = Math.max(1, Math.min(15, ui.draft.slots + d)); render(); },
+  draftTime(t){ ui.draft.time = t; render(); },
+  propose(){
+    const d = ui.draft;
+    if (!d.name.trim()) return toast('역할 이름을 적어 주세요');
+    store.set('proposals/' + uid('p'), {name: d.name.trim(), desc: d.desc.trim(), reason: d.reason.trim(), time: d.time, slots: d.slots, by: me.sid, at: store.now()})
+      .then(() => toast('제안을 보냈어요! 📮'));
+    ui.draft = {name: '', desc: '', reason: '', time: '쉬는 시간', slots: 1};
+    if (document.activeElement) document.activeElement.blur();
+    render();
+  },
+  like(pid){
+    const has = S.proposals?.[pid]?.likes?.[me.sid];
+    store.set('proposals/' + pid + '/likes/' + me.sid, has ? null : true);
+  },
+  delProposal(pid){ if (confirm('이 제안을 지울까요?')) store.set('proposals/' + pid, null); },
+  adopt(pid){
+    const pr = S.proposals[pid]; const rid = uid('r');
+    const order = Math.max(0, ...roles().map(r => r.order || 0)) + 1;
+    store.update({['roles/' + rid]: {emoji: '⭐', name: pr.name, desc: pr.desc || '', reason: pr.reason || '', time: pr.time || '쉬는 시간', slots: pr.slots || 1, order},
+                  ['proposals/' + pid + '/adopted']: rid});
+    toast('“' + pr.name + '” 역할을 추가했어요');
+  }
 };
 
 /* ---------------- 공통 조각 ---------------- */
@@ -394,15 +428,44 @@ function gameBoard(rid, g, who){
   </section>`;
 }
 
+function proposalForm(){
+  const d = ui.draft;
+  return `<section class="panel"><h2>✍️ 필요한 역할 제안하기</h2>
+    <p class="hint">우리 반에 꼭 필요한 역할을 생각해서 적어 보세요. 친구들의 제안에는 👍로 공감할 수 있어요.</p>
+    <label>역할 이름</label><input class="inp" maxlength="20" placeholder="예: 우유 배달부" value="${esc(d.name)}" oninput="ui.draft.name=this.value">
+    <label>🛠 하는 일</label><textarea class="inp" rows="2" maxlength="60" placeholder="이 역할은 무엇을 하나요?" oninput="ui.draft.desc=this.value">${esc(d.desc)}</textarea>
+    <label>💡 추천 이유 (왜 필요할까?)</label><textarea class="inp" rows="2" maxlength="80" placeholder="이 역할이 있으면 무엇이 좋아질까요?" oninput="ui.draft.reason=this.value">${esc(d.reason)}</textarea>
+    <label>🕘 하는 시간</label><div class="chips sm">${TIMES.map(t => `<button class="chip ${d.time === t ? 'on' : ''}" onclick="act.draftTime('${t}')">${t}</button>`).join('')}</div>
+    <label>👥 몇 명이 하면 좋을까요?</label><div class="stepper"><button onclick="act.draftSlot(-1)">−</button><b>${d.slots}명</b><button onclick="act.draftSlot(1)">＋</button></div>
+    <div class="center" style="margin-top:12px"><button class="btn big primary" onclick="act.propose()">📮 제안 보내기</button></div></section>`;
+}
+function proposalList(who){
+  const lc = p => Object.keys(p.likes || {}).length;
+  const ps = Object.entries(S.proposals || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => lc(b) - lc(a) || (a.at || 0) - (b.at || 0));
+  if (!ps.length) return `<section class="panel center"><h2>💬 친구들의 역할 제안</h2><p class="hint">아직 제안이 없어요.${who === 'teacher' ? ' 학생 태블릿에서 제안을 받아 보세요.' : ' 첫 번째로 제안해 볼까요?'}</p></section>`;
+  return `<section class="panel"><h2>💬 친구들의 역할 제안 (${ps.length})</h2><div class="grid">${ps.map(p => {
+    const liked = p.likes?.[me.sid], mine = p.by === me.sid, adopted = p.adopted && S.roles?.[p.adopted];
+    const btns = who === 'teacher'
+      ? `${adopted ? '<span class="tag">✅ 역할로 채택됨</span>' : `<button class="btn primary" onclick="act.adopt('${p.id}')">➕ 역할로 채택</button>`}<button class="btn" onclick="act.delProposal('${p.id}')">🗑</button>`
+      : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${p.id}')">👍 ${lc(p)}</button>${mine && !adopted ? `<button class="link" onclick="act.delProposal('${p.id}')">지우기</button>` : ''}${adopted ? '<span class="tag">✅ 채택됨</span>' : ''}`;
+    return `<div class="rcard prop ${adopted ? 'adopted' : ''}">
+      <div class="rtop"><div><div class="rn">${esc(p.name)}</div><div class="tag">🕘 ${esc(p.time)} · 👥 ${p.slots}명</div></div>${who === 'teacher' ? `<div class="count">👍${lc(p)}</div>` : ''}</div>
+      ${p.desc ? `<div class="desc">🛠 ${esc(p.desc)}</div>` : ''}${p.reason ? `<div class="reason">💡 ${esc(p.reason)}</div>` : ''}
+      <div class="by">제안: ${esc(stuName(p.by))}</div>
+      <div class="row" style="margin-top:8px">${btns}</div></div>`;
+  }).join('')}</div></section>`;
+}
+
 /* ---------------- 선생님 화면 ---------------- */
 function tSetup(){
   const rs = roles(), st = students(), sum = totalSlots(), n = st.length;
   const ok = n > 0 && rs.length > 0 && sum === n;
-  return `<section class="panel">
-    <div class="row between"><h2>① 역할 토의하기</h2><button class="btn" onclick="act.toggleBig()">${ui.bigView ? '✏️ 고치기' : '📺 크게 보기'}</button></div>
-    <p class="hint">어떤 역할이 필요한지, 왜 필요한지(추천 이유), 언제 하는지, 몇 명이 하면 좋을지 친구들과 이야기 나누고 카드에 정리해요. 학생 태블릿에도 바로 보여요.</p>
+  return `${proposalList('teacher')}<section class="panel">
+    <div class="row between"><h2>① 우리 반 역할 정리하기</h2><button class="btn" onclick="act.toggleBig()">${ui.bigView ? '✏️ 고치기' : '📺 크게 보기'}</button></div>
+    <p class="hint">학생 제안 중 토의로 정한 것을 ‘역할로 채택’하면 여기에 들어와요. 하는 일·추천 이유·시간·인원을 다듬고, 필요 없는 역할은 지워요.</p>
     <div class="sum ${sum === n ? 'ok' : 'bad'}">인원 합계 <b>${sum}</b>자리 / 우리 반 <b>${n}</b>명 ${sum === n ? '✅ 딱 맞아요!' : sum < n ? `— ${n - sum}자리 더 필요해요` : `— ${sum - n}자리 줄여야 해요`}</div>
     <div class="grid">${ui.bigView ? rs.map(r => roleCard(r)).join('') : rs.map(roleEditor).join('') + `<button class="addcard" onclick="act.addRole()">＋ 역할 추가</button>`}</div>
+    ${rs.length ? '' : `<div class="center"><button class="btn" onclick="act.loadExamples()">💡 예시 역할 불러오기</button></div>`}
   </section>
   <section class="panel"><h2>👧 우리 반 명단 (${n}명)</h2>
     <p class="hint">한 줄에 한 명씩, 번호 순서대로 적고 저장해요.</p>
@@ -455,7 +518,7 @@ function tDone(){
   ${resultBoard()}`;
 }
 function teacherView(){
-  if (loaded && !S.roles && !initDone){ initDone = true; store.update(defaultsMap()); }
+  if (loaded && !S.students && !initDone){ initDone = true; store.update(defaultsMap()); }
   const p = S.phase || 'setup';
   const body = {setup: tSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSetup;
   return `<div class="thead noprint"><b>🧑‍🏫 선생님 화면 · ${esc(ROOM)}</b>${stepper()}</div>${modeBanner()}${body()}
@@ -478,8 +541,8 @@ function studentView(){
   const mr = S.roles?.[assigned()[me.sid]];
   let body = '';
   if (p === 'setup'){
-    body = `<section class="panel center"><h2>💬 역할 토의 중</h2><p>어떤 역할이 우리 반에 필요할까요? 카드를 읽고 내가 하고 싶은 역할을 생각해 봐요!</p></section>
-      <div class="grid">${roles().map(r => roleCard(r)).join('')}</div>`;
+    body = proposalForm() + proposalList('student') +
+      `<section class="panel"><h2>📌 지금까지 정해진 역할 (${roles().length})</h2><div class="grid">${roles().map(r => roleCard(r)).join('') || '<span class="hint">아직 없어요</span>'}</div></section>`;
   } else if (p === 'apply'){
     if (mr) body = myRoleBox(mr, '이미 정해진 나의 역할') + `<p class="center hint">친구들이 지원하고 있어요. 잠시 기다려요!</p>`;
     else {
