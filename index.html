@@ -93,9 +93,20 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .cell.aisle{background:transparent;box-shadow:none;border:2px dashed #e0d5c0;color:#c9bca4;font-weight:400}
 .cell.drop.hover{transform:scale(1.08);outline:4px solid #ff8a3d}
 .cell.mine{outline:4px solid #ff8a3d}
+.sno{position:absolute;top:4px;left:7px;font-size:.75rem;opacity:.55;font-weight:900}
+.cell{position:relative}
+.cell.taken{filter:saturate(.6)}
+.cell.crowd{outline:3px solid #ff5a6a}
+.badge{position:absolute;top:-8px;right:-8px;background:#ff5a6a;color:#fff;border-radius:999px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.85rem;box-shadow:0 2px 0 #c93a48}
+.warnchip{display:inline-flex;border-radius:999px;overflow:hidden;border:2px solid #eadfcb;background:#fff}
+.warnchip button{font:inherit;font-weight:700;border:none;background:none;padding:6px 12px;cursor:pointer;color:#2b2b3a}
+.warnchip.w1{border-color:#ffc93d;background:#fff6d6}.warnchip.w2{border-color:#ff5a6a;background:#ffe5e8}
+.warnchip .undo{border-left:1px solid #eadfcb;color:#8a8070}
+.warnnm{background:#ffe5e8!important}
+.warnbanner{background:#ffe5e8;color:#c0263a;font-weight:800;border-radius:14px;padding:10px 14px;margin:10px 0;text-align:center}
 .cell.seat b{font-size:1.05rem}.cell.seat small{font-weight:600;opacity:.6;font-size:.75rem}
 .cell.swap{outline:4px dashed #7b6cff;transform:scale(1.05)}
-.rcard[data-zone].hover{outline:4px solid #ff8a3d}
+.rcard[data-drop].hover{outline:4px solid #ff8a3d}
 .dragzone{position:sticky;top:8px;z-index:5;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(255,248,236,.92);border-radius:999px;padding:8px;margin:10px 0}
 .namechip{display:inline-block;background:#ff8a3d;color:#fff;font-weight:900;font-size:1.3rem;padding:14px 26px;border-radius:999px;box-shadow:0 5px 0 #d9661c;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .namechip.ghost{position:fixed;z-index:99;pointer-events:none;transform:translate(-50%,-50%) scale(1.1);opacity:.9}
@@ -231,15 +242,28 @@ function zones(){
   return Object.entries(S.seat?.zones || {}).map(([id, z]) => ({id, ...z, emoji: '🪑', slots: cells.filter(c => c.z === id).length}))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 }
-const items = () => isSeat() ? zones() : roles();               // 지원할 대상(역할 또는 자리 구역)
-const itemOf = id => isSeat() ? zones().find(z => z.id === id) : (S.roles?.[id] ? {id, ...S.roles[id]} : null);
+function seatItems(){                                         // 자리 하나하나 = 지원 대상
+  const Z = S.seat?.zones || {};
+  return seatCells().map((c, i) => ({id: c.key, no: i + 1, name: (i + 1) + '번 자리', zone: Z[c.z].name, color: Z[c.z].color, emoji: '🪑', slots: 1, r: c.r, c: c.c}));
+}
+const items = () => isSeat() ? seatItems() : roles();          // 지원할 대상(역할 또는 자리)
+const itemOf = id => isSeat() ? seatItems().find(z => z.id === id) : (S.roles?.[id] ? {id, ...S.roles[id]} : null);
+const seatOwner = () => { const o = {}; Object.entries(S.seat?.assigned || {}).forEach(([sid, k]) => o[k] = sid); return o; };
+const warnOf = sid => +(D().warn?.[sid]) || 0;
+const penalized = sid => warnOf(sid) >= 2;                     // 경고 2번 → 마지막에 선택
+const canApply = sid => !penalized(sid) || unassigned().every(s => penalized(s.id));
+function apartBad(pos){                                        // 떨어뜨릴 친구가 붙어 앉은 쌍 수
+  return Object.values(S.seat?.apart || {}).filter(p => pos[p.a] && pos[p.b] &&
+    Math.max(Math.abs(pos[p.a].r - pos[p.b].r), Math.abs(pos[p.a].c - pos[p.b].c)) <= 1).length;
+}
+function seatPos(){ const it = {}; seatItems().forEach(x => it[x.id] = x); const pos = {}; Object.entries(S.seat?.assigned || {}).forEach(([sid, k]) => { if (it[k]) pos[sid] = it[k]; }); return pos; }
 const assigned = () => D().assigned || {};
 const rem = id => (+(itemOf(id)?.slots) || 0) - Object.values(assigned()).filter(x => x === id).length;
 const unassigned = () => students().filter(s => !assigned()[s.id]);
 const totalSlots = () => items().reduce((a, r) => a + (+r.slots || 0), 0);
 const dur = () => S.settings?.duration || 180;
 const studentLink = () => location.origin + location.pathname + '?room=' + encodeURIComponent(ROOM) + '&mode=student';
-const WORD = () => isSeat() ? '자리 구역' : '역할';
+const WORD = () => isSeat() ? '자리' : '역할';
 
 function toast(msg){
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
@@ -338,7 +362,6 @@ const act = {
   },
   /* 선생님만 보는 설정 */
   selStu(sid){ const i = ui.sel.indexOf(sid); if (i >= 0) ui.sel.splice(i, 1); else { ui.sel.push(sid); if (ui.sel.length > 2) ui.sel.shift(); } render(); },
-  fix(z){ if (ui.sel.length !== 1) return; store.set('seat/fixed/' + ui.sel[0], z); ui.sel = []; },
   unfix(sid){ store.set('seat/fixed/' + sid, null); },
   addApart(){ if (ui.sel.length !== 2) return; store.set('seat/apart/' + uid('a'), {a: ui.sel[0], b: ui.sel[1]}); ui.sel = []; },
   delApart(id){ store.set('seat/apart/' + id, null); },
@@ -351,10 +374,9 @@ const act = {
                 [P('endsAt')]: store.now() + d * 1000, [P('duration')]: d};
     if (first){
       if (isSeat()){
-        const fx = {}, zs = new Set(zones().map(z => z.id));
-        Object.entries(S.seat?.fixed || {}).forEach(([sid, z]) => { if (S.students?.[sid] && zs.has(z)) fx[sid] = z; });
+        const fx = {}, ks = new Set(seatItems().map(z => z.id)), used = new Set();
+        Object.entries(S.seat?.fixed || {}).forEach(([sid, k]) => { if (S.students?.[sid] && ks.has(k) && !used.has(k)){ fx[sid] = k; used.add(k); } });
         up['seat/assigned'] = Object.keys(fx).length ? fx : null;
-        up['seat/seats'] = null;
       } else up.assigned = null;
     }
     store.update(up);
@@ -363,7 +385,8 @@ const act = {
   pick(id){
     if (phase() !== 'apply' || store.now() > (D().endsAt || 0)) return toast('지원 시간이 끝났어요');
     if (assigned()[me.sid]) return;
-    if (rem(id) <= 0) return toast('남은 자리가 없어요');
+    if (!canApply(me.sid)) return toast('경고 2번! 다른 친구들이 모두 고른 뒤에 고를 수 있어요');
+    if (rem(id) <= 0) return toast(isSeat() ? '이미 주인이 정해진 자리예요' : '남은 자리가 없어요');
     store.set(P('picks/' + me.sid), id);
   },
   async closeRound(){
@@ -371,7 +394,7 @@ const act = {
     closing = true;
     try {
       const picks = D().picks || {}, un = unassigned(), up = {}, games = {}, byItem = {};
-      un.forEach(s => { const r = picks[s.id]; if (r && itemOf(r) && rem(r) > 0) (byItem[r] = byItem[r] || []).push(s.id); });
+      un.forEach(s => { const r = picks[s.id]; if (r && canApply(s.id) && itemOf(r) && rem(r) > 0) (byItem[r] = byItem[r] || []).push(s.id); });
       let newly = 0;
       for (const [rid, ids] of Object.entries(byItem)){
         const R = rem(rid);
@@ -424,6 +447,18 @@ const act = {
   },
   afterGames(){ store.update({[P('games')]: null, [P('phase')]: unassigned().length ? 'closed' : 'done'}); },
   randomRest(){
+    if (isSeat()){
+      const un = unassigned().map(s => s.id), free = seatItems().filter(x => rem(x.id) > 0), base = seatPos();
+      let best = null, bestBad = Infinity;
+      for (let t = 0; t < 300 && bestBad > 0; t++){
+        const ss = shuffle(free.slice()), pos = Object.assign({}, base), m = {};
+        shuffle(un.slice()).forEach((sid, i) => { if (ss[i]){ m[sid] = ss[i].id; pos[sid] = ss[i]; } });
+        const bad = apartBad(pos); if (bad < bestBad){ best = m; bestBad = bad; }
+      }
+      const up = {}; Object.entries(best || {}).forEach(([sid, k]) => up['seat/assigned/' + sid] = k);
+      up['seat/phase'] = un.length - Object.keys(best || {}).length === 0 ? 'done' : 'closed';
+      store.update(up); return;
+    }
     const un = shuffle(unassigned().map(s => s.id));
     const seats = []; items().forEach(r => { for (let i = 0; i < rem(r.id); i++) seats.push(r.id); });
     shuffle(seats);
@@ -434,8 +469,7 @@ const act = {
   },
   backToSetup(){
     if (!confirm('지원 결과를 지우고 토의 단계로 돌아갈까요? (제안·명단·설정은 그대로 남아요)')) return;
-    const up = {[P('phase')]: 'setup', [P('assigned')]: null, [P('picks')]: null, [P('games')]: null, [P('round')]: null, [P('endsAt')]: null};
-    if (isSeat()) up['seat/seats'] = null;
+    const up = {[P('phase')]: 'setup', [P('assigned')]: null, [P('picks')]: null, [P('games')]: null, [P('round')]: null, [P('endsAt')]: null, [P('warn')]: null};
     store.update(up);
   },
   resetAll(){
@@ -446,30 +480,27 @@ const act = {
   },
   print(){ window.print(); },
 
-  /* 자리 최종 배치 */
-  placeSeats(){
-    const A = S.seat?.assigned || {}, apart = Object.values(S.seat?.apart || {}), cells = seatCells();
-    const byZone = {}; cells.forEach(c => (byZone[c.z] = byZone[c.z] || []).push(c));
-    const pos = {}; cells.forEach(c => pos[c.key] = c);
-    let best = null, bestBad = Infinity;
-    for (let t = 0; t < 400 && bestBad > 0; t++){
-      const seats = {}, where = {};
-      Object.entries(byZone).forEach(([z, cs]) => {
-        const studs = shuffle(Object.keys(A).filter(s => A[s] === z)); const cc = shuffle(cs.slice());
-        studs.forEach((s, i) => { if (cc[i]){ seats[cc[i].key] = s; where[s] = cc[i]; } });
-      });
-      const bad = apart.filter(p => where[p.a] && where[p.b] && Math.max(Math.abs(where[p.a].r - where[p.b].r), Math.abs(where[p.a].c - where[p.b].c)) <= 1).length;
-      if (bad < bestBad){ best = seats; bestBad = bad; }
-    }
-    store.set('seat/seats', best);
-    toast(bestBad ? `떨어뜨릴 친구 ${bestBad}쌍이 가까이 앉았어요. 자리를 눌러 직접 바꿔 주세요` : '자리 배치 완료! 🎉');
+  /* 경고 */
+  warn(sid, d){
+    const n = Math.max(0, Math.min(2, warnOf(sid) + d));
+    const up = {[P('warn/' + sid)]: n || null};
+    if (n >= 2) up[P('picks/' + sid)] = null;
+    store.update(up);
+    if (d > 0) toast(stuName(sid) + ' 경고 ' + n + '번' + (n >= 2 ? ' → 마지막에 선택' : ''));
   },
+  /* 자리 바꾸기 (선생님, 결과 화면) */
   tapSeat(k){
     if (!ui.swap){ ui.swap = k; render(); return; }
     if (ui.swap === k){ ui.swap = null; render(); return; }
-    const s = S.seat?.seats || {}, from = ui.swap, a = s[from] || null, b = s[k] || null;
+    const own = seatOwner(), from = ui.swap, a = own[from], b = own[k];
     ui.swap = null;
-    store.update({['seat/seats/' + from]: b, ['seat/seats/' + k]: a});
+    const up = {}; if (a) up['seat/assigned/' + a] = k; if (b) up['seat/assigned/' + b] = from;
+    if (a || b) store.update(up); else render();
+  },
+  fixSeat(k){
+    if (ui.sel.length !== 1) return toast('먼저 친구 1명을 골라 주세요');
+    const up = {}; Object.entries(S.seat?.fixed || {}).forEach(([sid, kk]) => { if (kk === k) up['seat/fixed/' + sid] = null; });
+    up['seat/fixed/' + ui.sel[0]] = k; ui.sel = []; store.update(up);
   },
 
   /* 학생 제안: 역할 */
@@ -516,18 +547,18 @@ function startDrag(e){
   const ghost = e.currentTarget.cloneNode(true);
   ghost.classList.add('ghost'); ghost.removeAttribute('onpointerdown');
   document.body.appendChild(ghost);
-  const zoneAt = ev => document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-zone]');
+  const zoneAt = ev => document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-drop]');
   const clearHover = () => document.querySelectorAll('.hover').forEach(x => x.classList.remove('hover'));
   const move = ev => {
     ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
     clearHover(); const el = zoneAt(ev);
-    if (el) document.querySelectorAll(`[data-zone="${el.dataset.zone}"]`).forEach(x => x.classList.add('hover'));
+    if (el) document.querySelectorAll(`[data-drop="${el.dataset.drop}"]`).forEach(x => x.classList.add('hover'));
   };
   const up = ev => {
     document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
     ghost.remove(); clearHover();
     const el = ev.type === 'pointerup' ? zoneAt(ev) : null;
-    if (el) act.pick(el.dataset.zone);
+    if (el) act.pick(el.dataset.drop);
   };
   move(e);
   document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
@@ -555,7 +586,7 @@ function roleEditor(r){
 const timerHtml = () => `<div class="timer" data-timer><div class="tnum">--</div><div class="tbar"><i></i></div></div>`;
 function stepper(){
   const idx = {setup: 0, apply: 1, game: 2, closed: 2, done: 3}[phase()] ?? 0;
-  const st = isSeat() ? ['① 원칙 토의', '② 구역 지원', '③ 미니게임', '④ 자리 배치'] : ['① 역할 토의', '② 지원하기', '③ 미니게임', '④ 결과'];
+  const st = isSeat() ? ['① 원칙 토의', '② 자리 지원', '③ 미니게임', '④ 자리 배치'] : ['① 역할 토의', '② 지원하기', '③ 미니게임', '④ 결과'];
   return `<div class="steps">${st.map((s, i) => `<span class="${i === idx ? 'on' : i < idx ? 'done' : ''}">${s}</span>`).join('')}</div>`;
 }
 function modeBanner(){
@@ -580,16 +611,8 @@ function resultBoard(){
     }).join('')}`;
   }).join('')}</section>`;
 }
-function zoneResult(){
-  const A = assigned();
-  return `<section class="panel"><h2>🪑 구역별 결과</h2>${zones().map(z => {
-    const ns = Object.keys(A).filter(s => A[s] === z.id).map(stuName);
-    return `<div class="rrow"><span class="zdot" style="background:${z.color}"></span><b>${esc(z.name)}</b><span class="rdesc">${z.slots}자리</span>
-      <span class="names">${ns.map(n => `<span class="nm">${esc(n)}</span>`).join('')}${'<span class="nm empty">빈자리</span>'.repeat(Math.max(0, z.slots - ns.length))}</span></div>`;
-  }).join('')}</section>`;
-}
 function myRoleBox(r, title){
-  if (isSeat()) return `<div class="myrole"><div class="em">🪑</div><div class="hint">${title || '나의 자리 구역'}</div><h2><span class="zdot" style="background:${r.color}"></span> ${esc(r.name)}</h2></div>`;
+  if (isSeat()) return `<div class="myrole"><div class="em">🪑</div><div class="hint">${title || '나의 자리'}</div><h2><span class="zdot" style="background:${r.color}"></span> ${esc(r.name)}</h2><div class="tag">${esc(r.zone)}</div></div>`;
   return `<div class="myrole"><div class="em">${esc(r.emoji)}</div><div class="hint">${title || '나의 역할'}</div><h2>${esc(r.name)}</h2>
     <div class="tag">🕘 ${esc(r.time)}</div>${r.desc ? `<p>🛠 ${esc(r.desc)}</p>` : ''}</div>`;
 }
@@ -671,23 +694,45 @@ function principles(){
 
 /* 교실 배치도 그리기: mode = edit | apply | view | final */
 function gridHtml(mode){
-  const L = layout(), Z = S.seat?.zones || {}, seats = S.seat?.seats || {};
-  const myPick = (S.seat?.picks || {})[me.sid] || (S.seat?.assigned || {})[me.sid];
+  const L = layout(), Z = S.seat?.zones || {}, own = seatOwner(), teacher = me.role === 'teacher';
+  const no = {}; seatItems().forEach(x => no[x.id] = x.no);
+  const picks = S.seat?.picks || {}, myPick = picks[me.sid], fixedAt = {};
+  Object.entries(S.seat?.fixed || {}).forEach(([sid, k]) => fixedAt[k] = sid);
+  const apply = mode === 'apply' && S.seat?.phase === 'apply';
   let h = `<div class="classroom"><div class="desk">🧑‍🏫 교탁 · 칠판 (앞)</div><div class="sgrid" style="grid-template-columns:repeat(${L.cols},1fr)">`;
   for (let r = 0; r < L.rows; r++) for (let c = 0; c < L.cols; c++){
     const k = cellKey(r, c), z = L.cells?.[k], zone = z && Z[z];
     if (!zone){ h += `<div class="cell aisle" ${mode === 'edit' ? `onclick="act.paint('${k}')"` : ''}>${mode === 'edit' ? '통로' : ''}</div>`; continue; }
-    const st = `style="background:${zone.color}"`;
-    if (mode === 'edit') h += `<div class="cell" ${st} onclick="act.paint('${k}')">${esc(zone.name)}</div>`;
-    else if (mode === 'apply') h += `<div class="cell drop ${myPick === z ? 'mine' : ''}" ${st} data-zone="${z}" onclick="${me.role === 'student' ? `act.pick('${z}')` : ''}">${esc(zone.name)}</div>`;
-    else if (mode === 'final'){
-      const sid = seats[k], teacher = me.role === 'teacher';
-      h += `<div class="cell seat ${sid === me.sid && !teacher ? 'mine' : ''} ${ui.swap === k && teacher ? 'swap' : ''}" ${st} ${teacher ? `onclick="act.tapSeat('${k}')"` : ''}>
-        <b>${sid ? esc(stuName(sid)) : ''}</b><small>${esc(zone.name)}</small></div>`;
+    const st = `style="background:${zone.color}"`, num = `<span class="sno">${no[k]}</span>`;
+    if (mode === 'edit'){ h += `<div class="cell" ${st} onclick="act.paint('${k}')">${num}${esc(zone.name)}</div>`; continue; }
+    if (mode === 'fix'){ h += `<div class="cell" ${st} onclick="act.fixSeat('${k}')">${num}<b>${fixedAt[k] ? '📌 ' + esc(stuName(fixedAt[k])) : ''}</b></div>`; continue; }
+    const sid = own[k];
+    if (sid){   // 주인이 정해진 자리
+      const click = teacher && mode === 'final' && S.seat?.phase === 'done' ? `onclick="act.tapSeat('${k}')"` : '';
+      h += `<div class="cell seat taken ${sid === me.sid && !teacher ? 'mine' : ''} ${ui.swap === k && teacher ? 'swap' : ''}" ${st} ${click}>${num}<b>${esc(stuName(sid))}</b></div>`;
+      continue;
     }
-    else h += `<div class="cell" ${st}>${esc(zone.name)}</div>`;
+    if (apply){
+      const ap = Object.keys(picks).filter(s2 => picks[s2] === k && !own[k] && !(S.seat?.assigned || {})[s2]);
+      const who = teacher ? ap.map(x => esc(stuName(x))).join(' · ') : (myPick === k ? '✋ 나' : '');
+      h += `<div class="cell drop ${myPick === k ? 'mine' : ''} ${ap.length > 1 ? 'crowd' : ''}" ${st} data-drop="${k}" ${!teacher ? `onclick="act.pick('${k}')"` : ''}>
+        ${num}${ap.length ? `<span class="badge">${ap.length}</span>` : ''}<b>${who}</b></div>`;
+      continue;
+    }
+    const click = teacher && mode === 'final' && S.seat?.phase === 'done' ? `onclick="act.tapSeat('${k}')"` : '';
+    h += `<div class="cell seat ${ui.swap === k && teacher ? 'swap' : ''}" ${st} ${click}>${num}<small>${mode === 'final' ? '빈자리' : esc(zone.name)}</small></div>`;
   }
   return h + '</div></div>';
+}
+function warnPanel(){
+  return `<section class="panel noprint"><h3>⚠️ 경고 주기</h3>
+    <p class="hint">이름을 누르면 경고 1번이에요. 경고 2번을 받은 친구는 다른 친구들이 모두 정해진 뒤 <b>마지막에</b> 고를 수 있어요. ↩는 경고 취소예요.</p>
+    <div class="names">${students().map(s => { const w = warnOf(s.id);
+      return `<span class="warnchip w${w}"><button onclick="act.warn('${s.id}',1)">${esc(s.name)}${w ? ' ' + '⚠️'.repeat(w) : ''}</button>${w ? `<button class="undo" onclick="act.warn('${s.id}',-1)">↩</button>` : ''}</span>`; }).join('')}</div></section>`;
+}
+function warnBanner(){
+  const w = warnOf(me.sid); if (!w) return '';
+  return `<div class="warnbanner">⚠️ 선생님 경고 ${w}번${w >= 2 ? ' — 다른 친구들이 모두 정해진 뒤 마지막에 고를 수 있어요' : ' — 한 번 더 받으면 마지막에 고르게 돼요'}</div>`;
 }
 
 /* ---------------- 선생님 화면 ---------------- */
@@ -726,10 +771,9 @@ function tSeatSetup(){
   const L = layout(), zs = zones(), n = students().length, seats = totalSlots();
   const ok = n > 0 && seats >= n;
   const fixed = S.seat?.fixed || {}, apart = Object.entries(S.seat?.apart || {});
-  const zoneName = id => zs.find(z => z.id === id)?.name || '?';
   return `${ideaList('teacher')}
   <section class="panel"><h2>🗺 교실 배치도</h2>
-    <p class="hint">아래에서 구역을 고른 뒤 배치도 칸을 누르면 그 구역 자리가 돼요. ‘통로’로 칠하면 빈칸이 돼요. 학생들은 이 구역에 이름을 끌어다 놓아 지원해요.</p>
+    <p class="hint">아래에서 구역(색깔)을 고른 뒤 배치도 칸을 누르면 자리가 돼요. ‘통로’로 칠하면 빈칸이 돼요. 학생들은 원하는 <b>자리</b>에 자기 이름표를 끌어다 놓아 지원해요.</p>
     <div class="row"><b>가로</b><div class="stepper"><button onclick="act.resize('cols',-1)">−</button><b>${L.cols}칸</b><button onclick="act.resize('cols',1)">＋</button></div>
       <b style="margin-left:14px">세로</b><div class="stepper"><button onclick="act.resize('rows',-1)">−</button><b>${L.rows}줄</b><button onclick="act.resize('rows',1)">＋</button></div></div>
     <label>칠할 구역 고르기</label>
@@ -744,33 +788,37 @@ function tSeatSetup(){
   <section class="panel noprint"><h2>🔒 선생님만 보는 설정</h2>
     <p class="hint">학생 화면에는 보이지 않아요. 친구 이름을 눌러 고른 뒤 아래 버튼을 눌러요.</p>
     <div class="names">${students().map(s => `<button class="chip ${ui.sel.includes(s.id) ? 'on' : ''}" onclick="act.selStu('${s.id}')">${esc(s.name)}</button>`).join('')}</div>
-    <label>📌 구역 미리 정하기 (친구 1명 고르기) — 예: 눈이 나쁜 친구는 앞줄</label>
-    <div class="chips">${zs.map(z => `<button class="chip" ${ui.sel.length === 1 ? '' : 'disabled'} onclick="act.fix('${z.id}')"><span class="zdot" style="background:${z.color}"></span> ${esc(z.name)}에 고정</button>`).join('')}</div>
-    <div class="names">${Object.entries(fixed).map(([sid, z]) => `<span class="nm">${esc(stuName(sid))} → ${esc(zoneName(z))} <button class="x" onclick="act.unfix('${sid}')">✕</button></span>`).join('')}</div>
-    <label>↔️ 떨어뜨려 앉히기 (친구 2명 고르기) — 최종 자리에서 서로 붙지 않게 배치해요</label>
+    <label>📌 자리 미리 정하기 — 친구 1명을 고른 뒤 아래 배치도에서 자리를 눌러요 (예: 눈이 나쁜 친구는 앞자리)</label>
+    ${gridHtml('fix')}
+    <div class="names">${Object.entries(fixed).map(([sid, k]) => `<span class="nm">${esc(stuName(sid))} → ${esc(itemOf(k)?.name || '?')} <button class="x" onclick="act.unfix('${sid}')">✕</button></span>`).join('')}</div>
+    <label>↔️ 떨어뜨려 앉히기 (친구 2명 고르기) — 무작위 배정 때 서로 붙지 않게 하고, 결과 화면에서 붙어 앉았는지 알려 줘요</label>
     <button class="btn" ${ui.sel.length === 2 ? '' : 'disabled'} onclick="act.addApart()">↔️ 두 친구 떨어뜨리기</button>
     <div class="names">${apart.map(([id, p]) => `<span class="nm">${esc(stuName(p.a))} ↔ ${esc(stuName(p.b))} <button class="x" onclick="act.delApart('${id}')">✕</button></span>`).join('')}</div>
   </section>
-  <div class="bottombar"><button class="btn big primary" ${ok ? '' : 'disabled'} onclick="act.startRound()">🚀 1차 구역 지원 시작</button>
+  <div class="bottombar"><button class="btn big primary" ${ok ? '' : 'disabled'} onclick="act.startRound()">🚀 1차 자리 지원 시작</button>
     ${ok ? '' : '<div class="hint">자리 수가 학생 수보다 많거나 같아야 시작할 수 있어요</div>'}</div>`;
 }
 function tApply(){
   const picks = D().picks || {}, un = unassigned();
   const open = items().filter(r => rem(r.id) > 0);
-  const notPicked = un.filter(s => !picks[s.id] || !itemOf(picks[s.id]));
-  return `<section class="panel center"><h2>${D().round}차 ${isSeat() ? '구역 ' : ''}지원 중!</h2>${timerHtml()}
+  const elig = un.filter(s => canApply(s.id)), later = un.filter(s => !canApply(s.id));
+  const notPicked = elig.filter(s => !picks[s.id] || !itemOf(picks[s.id]));
+  const last = later.length === 0 && un.length > 0 && un.every(s => penalized(s.id));
+  return `<section class="panel center"><h2>${last ? '⚠️ 마지막 선택' : D().round + '차 ' + WORD() + ' 지원 중!'}</h2>${timerHtml()}
     <div class="row center"><button class="btn" onclick="act.addTime(30)">+30초</button><button class="btn danger" onclick="act.closeRound()">지금 마감</button></div></section>
-  ${isSeat() ? principles() + gridHtml('apply') : ''}
-  <div class="grid">${open.map(r => {
-    const ap = un.filter(s => picks[s.id] === r.id), R = rem(r.id);
+  ${isSeat() ? principles() + gridHtml('apply') + '<p class="hint center">숫자 배지는 그 자리에 지원한 친구 수예요. 2명 이상이면 마감 후 미니게임!</p>' :
+  `<div class="grid">${open.map(r => {
+    const ap = un.filter(s => picks[s.id] === r.id && canApply(s.id)), R = rem(r.id);
     const cls = ap.length > R ? 'over' : ap.length === R ? 'full' : '';
-    return `<div class="rcard ${cls}" ${isSeat() ? `style="border-left:12px solid ${r.color}"` : ''}><div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div>${r.time ? `<div class="tag">🕘 ${esc(r.time)}</div>` : ''}</div>
+    return `<div class="rcard ${cls}"><div class="rtop"><span class="em">${esc(r.emoji)}</span><div><div class="rn">${esc(r.name)}</div>${r.time ? `<div class="tag">🕘 ${esc(r.time)}</div>` : ''}</div>
       <div class="count">${ap.length}<small>/${R}</small></div></div>
       <div class="names">${ap.map(s => `<span class="nm">${esc(s.name)}</span>`).join('') || '<span class="hint">아직 없어요</span>'}</div>
       ${ap.length > R ? '<div class="warn">🎲 마감되면 미니게임!</div>' : ''}</div>`;
-  }).join('')}</div>
+  }).join('')}</div>`}
   <section class="panel"><h3>🤔 아직 고르지 않은 친구 (${notPicked.length}명)</h3>
-    <div class="names">${notPicked.map(s => `<span class="nm gray">${esc(s.name)}</span>`).join('') || '<span class="hint">모두 골랐어요!</span>'}</div></section>`;
+    <div class="names">${notPicked.map(s => `<span class="nm gray">${esc(s.name)}</span>`).join('') || '<span class="hint">모두 골랐어요!</span>'}</div>
+    ${later.length ? `<h3>⏳ 마지막에 고를 친구 (경고 2번)</h3><div class="names">${later.map(s => `<span class="nm warnnm">${esc(s.name)}</span>`).join('')}</div>` : ''}</section>
+  ${warnPanel()}`;
 }
 function tGame(){
   const gs = Object.entries(D().games || {});
@@ -778,28 +826,30 @@ function tGame(){
   return `<section class="panel center"><h2>🎲 미니게임: 행운의 카드 뽑기</h2>
     <p class="hint">자리보다 지원자가 많은 ${WORD()}이에요. 지원한 친구들이 자기 태블릿에서 카드를 한 장씩 골라요.<br>🎉 카드를 뽑은 친구가 그 ${WORD()}에 들어가고, 🍀 카드를 뽑은 친구는 다음 지원에서 다시 골라요.</p>
     ${allRev ? `<button class="btn big primary" onclick="act.afterGames()">다음으로 ▶</button>` : `<button class="btn big" onclick="act.revealAll()">✨ 모두 공개</button>`}</section>
-  ${gs.map(([rid, g]) => gameBoard(rid, g, 'teacher')).join('')}`;
+  ${gs.map(([rid, g]) => gameBoard(rid, g, 'teacher')).join('')}${warnPanel()}`;
 }
 function tClosed(){
   const un = unassigned(), open = items().filter(r => rem(r.id) > 0), round = D().round || 1;
+  const lastOnly = un.length > 0 && un.every(s => penalized(s.id));
   return `<section class="panel center"><h2>${round}차 지원 결과</h2>
     <p>배정 완료 <b>${students().length - un.length}</b>명 · 아직 정해지지 않은 친구 <b>${un.length}</b>명</p>
-    <div class="names center">${un.map(s => `<span class="nm">${esc(s.name)}</span>`).join('')}</div>
-    <h3>남은 자리</h3><div class="names center">${open.map(r => `<span class="nm gray">${esc(r.emoji)} ${esc(r.name)} ${rem(r.id)}자리</span>`).join('')}</div>
-    <div class="row center" style="margin-top:14px"><button class="btn big primary" ${open.length ? '' : 'disabled'} onclick="act.startRound()">🚀 ${round + 1}차 지원 시작</button>
+    <div class="names center">${un.map(s => `<span class="nm ${penalized(s.id) ? 'warnnm' : ''}">${esc(s.name)}${penalized(s.id) ? ' ⚠️⚠️' : ''}</span>`).join('')}</div>
+    ${isSeat() ? '' : `<h3>남은 자리</h3><div class="names center">${open.map(r => `<span class="nm gray">${esc(r.emoji)} ${esc(r.name)} ${rem(r.id)}자리</span>`).join('')}</div>`}
+    <div class="row center" style="margin-top:14px"><button class="btn big primary" ${open.length ? '' : 'disabled'} onclick="act.startRound()">${lastOnly ? '⚠️ 마지막 선택 시작' : '🚀 ' + (round + 1) + '차 지원 시작'}</button>
       <button class="btn" onclick="act.randomRest()">🎲 남은 친구 무작위 배정</button></div></section>
-  ${isSeat() ? zoneResult() : resultBoard()}`;
+  ${isSeat() ? `<section class="panel">${gridHtml('final')}</section>` : resultBoard()}${warnPanel()}`;
 }
 function tDone(){
   if (!isSeat()) return `<section class="panel center"><h2>🎊 1인 1역이 모두 정해졌어요!</h2>
     <div class="row center noprint"><button class="btn primary" onclick="act.print()">🖨 인쇄하기</button><button class="btn" onclick="act.backToSetup()">↩ 처음부터 다시 정하기</button></div></section>
   ${resultBoard()}`;
-  const placed = S.seat?.seats;
-  return `<section class="panel center"><h2>🎊 구역이 모두 정해졌어요!</h2>
-    ${placed ? `<p class="hint noprint">두 자리를 차례로 누르면 서로 바꿀 수 있어요.</p>` : `<p>이제 구역 안에서 자리를 정해요. ‘떨어뜨려 앉히기’ 설정도 함께 반영돼요.</p>`}
-    <div class="row center noprint"><button class="btn big primary" onclick="act.placeSeats()">🎲 ${placed ? '다시 섞기' : '자리 배치하기'}</button>
-      ${placed ? `<button class="btn" onclick="act.print()">🖨 인쇄하기</button>` : ''}</div></section>
-  ${placed ? `<section class="panel">${principles()}${gridHtml('final')}</section>` : zoneResult()}`;
+  const pos = seatPos();
+  const close = Object.values(S.seat?.apart || {}).filter(p => pos[p.a] && pos[p.b] && Math.max(Math.abs(pos[p.a].r - pos[p.b].r), Math.abs(pos[p.a].c - pos[p.b].c)) <= 1);
+  return `<section class="panel center"><h2>🎊 우리 반 자리가 모두 정해졌어요!</h2>
+    <p class="hint noprint">두 자리를 차례로 누르면 서로 바꿀 수 있어요 (빈자리로 옮기기도 돼요).</p>
+    ${close.length ? `<p class="warn noprint">🔒 떨어뜨리기로 한 친구가 가까이 앉았어요: ${close.map(p => esc(stuName(p.a)) + ' ↔ ' + esc(stuName(p.b))).join(', ')}</p>` : ''}
+    <div class="row center noprint"><button class="btn primary" onclick="act.print()">🖨 인쇄하기</button></div></section>
+  <section class="panel">${principles()}${gridHtml('final')}</section>`;
 }
 function teacherView(){
   if (loaded && !S.students && !initDone){ initDone = true; store.update(defaultsMap()); }
@@ -822,9 +872,10 @@ function sPickName(){
 }
 function sApplyRole(){
   const picks = D().picks || {}, un = unassigned(), myPick = picks[me.sid];
+  if (!canApply(me.sid)) return warnBanner() + `<section class="panel center"><h2>⏳ 조금만 기다려요</h2><p>다른 친구들이 모두 역할을 정하면 마지막에 남은 역할에서 고를 수 있어요.</p></section>`;
   const expired = store.now() > (D().endsAt || 0);
   const open = items().filter(r => rem(r.id) > 0);
-  return `<section class="panel center"><h2>${D().round}차 지원</h2>${timerHtml()}
+  return `${warnBanner()}<section class="panel center"><h2>${D().round}차 지원</h2>${timerHtml()}
     <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '하고 싶은 역할을 눌러 지원하세요. 마감 전까지는 바꿀 수 있어요.'}</p></section>
     <div class="grid">${open.map(r => {
       const cnt = un.filter(s => picks[s.id] === r.id).length, R = rem(r.id), mine = myPick === r.id;
@@ -833,22 +884,19 @@ function sApplyRole(){
     }).join('')}</div>`;
 }
 function sApplySeat(){
-  const picks = D().picks || {}, un = unassigned(), myPick = picks[me.sid];
+  const picks = D().picks || {}, myPick = picks[me.sid];
   const expired = store.now() > (D().endsAt || 0);
-  const myZone = zones().find(z => z.id === myPick);
-  return `<section class="panel center"><h2>${D().round}차 구역 지원</h2>${timerHtml()}
-    <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '👇 내 이름표를 앉고 싶은 구역으로 <b>끌어다 놓으세요</b>. 마감 전까지는 옮길 수 있어요.'}</p>
+  const mySeat = itemOf(myPick);
+  if (!canApply(me.sid)) return warnBanner() + `<section class="panel center"><h2>⏳ 조금만 기다려요</h2><p>다른 친구들이 모두 자리를 정하면 마지막에 남은 자리에서 고를 수 있어요.</p></section>${gridHtml('apply')}`;
+  return `${warnBanner()}<section class="panel center"><h2>${D().round}차 자리 지원</h2>${timerHtml()}
+    <p>${expired ? '⏰ 마감! 결과를 기다려요.' : '👇 내 이름표를 앉고 싶은 <b>자리</b>로 끌어다 놓으세요. 마감 전까지는 옮길 수 있어요.'}</p>
     </section>
     ${expired ? '' : `<div class="dragzone"><span class="namechip" onpointerdown="startDrag(event)">✋ ${esc(stuName(me.sid))}</span>
-      ${myZone ? `<span class="mine-msg">✅ <b>${esc(myZone.name)}</b>에 지원했어요</span>` : ''}</div>`}
-    ${expired && myZone ? `<p class="mine-msg center">✅ <b>${esc(myZone.name)}</b>에 지원했어요</p>` : ''}
+      ${mySeat ? `<span class="mine-msg">✅ <b>${esc(mySeat.name)}</b>에 지원했어요</span>` : ''}</div>`}
+    ${expired && mySeat ? `<p class="mine-msg center">✅ <b>${esc(mySeat.name)}</b>에 지원했어요</p>` : ''}
     ${gridHtml('apply')}
-    ${principles()}
-    <div class="grid">${zones().filter(z => rem(z.id) > 0).map(z => {
-      const cnt = un.filter(s => picks[s.id] === z.id).length, R = rem(z.id);
-      return `<div class="rcard ${myPick === z.id ? 'picked' : ''}" data-zone="${z.id}" style="border-left:12px solid ${z.color}">
-        <div class="rn">${esc(z.name)}</div><div class="applybar">지원 ${cnt}명 / ${R}자리</div></div>`;
-    }).join('')}</div>`;
+    <p class="hint center">숫자는 그 자리에 지원한 친구 수예요. 같은 자리에 여러 명이 지원하면 카드 뽑기로 정해요.</p>
+    ${principles()}`;
 }
 function studentView(){
   if (!loaded) return `<div class="home"><div class="logo">⏳</div><h2>연결하는 중…</h2></div>`;
@@ -883,10 +931,9 @@ function studentView(){
   } else if (p === 'closed'){
     body = mr ? myRoleBox(mr) + `<p class="center hint">남은 친구들의 다음 지원을 기다려요.</p>`
       : `<section class="panel center"><h2>🙌 다음 지원을 준비하고 있어요</h2><p>남은 ${WORD()} 중에서 어디로 갈지 미리 생각해 둬요!</p></section>
-         ${isSeat() ? gridHtml('view') : ''}<div class="grid">${items().filter(r => rem(r.id) > 0).map(r => roleCard({...r, slots: rem(r.id)})).join('')}</div>`;
+         ${warnBanner()}${isSeat() ? gridHtml('final') : `<div class="grid">${items().filter(r => rem(r.id) > 0).map(r => roleCard({...r, slots: rem(r.id)})).join('')}</div>`}`;
   } else if (p === 'done'){
-    if (isSeat()) body = S.seat?.seats ? `<section class="panel center"><h2>🎊 우리 반 자리 배치</h2><p class="hint">노란 테두리가 내 자리예요</p></section>${principles()}${gridHtml('final')}`
-      : (mr ? myRoleBox(mr) : '') + `<section class="panel center"><p>선생님이 구역 안에서 자리를 정하고 있어요 🪑</p></section>`;
+    if (isSeat()) body = `<section class="panel center"><h2>🎊 우리 반 자리 배치</h2><p class="hint">주황 테두리가 내 자리예요</p></section>${principles()}${gridHtml('final')}`;
     else body = (mr ? myRoleBox(mr) : '') + resultBoard();
   }
   return head + title + stepper() + body;
