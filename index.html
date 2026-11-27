@@ -102,6 +102,8 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .warnchip button{font:inherit;font-weight:700;border:none;background:none;padding:6px 12px;cursor:pointer;color:#2b2b3a}
 .warnchip.w1{border-color:#ffc93d;background:#fff6d6}.warnchip.w2{border-color:#ff5a6a;background:#ffe5e8}
 .warnchip .undo{border-left:1px solid #eadfcb;color:#8a8070}
+.btn.tester{background:#eef6ff;box-shadow:0 3px 0 #bcd6f2}
+.testbanner{background:#eef6ff;color:#2a5d9f;font-weight:800;border-radius:14px;padding:10px 14px;margin:10px 0;text-align:center}
 .warnnm{background:#ffe5e8!important}
 .warnbanner{background:#ffe5e8;color:#c0263a;font-weight:800;border-radius:14px;padding:10px 14px;margin:10px 0;text-align:center}
 .cell.seat b{font-size:1.05rem}.cell.seat small{font-weight:600;opacity:.6;font-size:.75rem}
@@ -226,7 +228,9 @@ const P = p => (isSeat() ? 'seat/' : '') + p;                // 지금 활동의
 const phase = () => D().phase || 'setup';
 const roles = () => Object.entries(S.roles || {}).map(([id, r]) => ({id, ...r})).sort((a, b) => (a.order || 0) - (b.order || 0));
 const students = () => Object.entries(S.students || {}).map(([id, s]) => ({id, ...s})).sort((a, b) => a.no - b.no);
-const stuName = id => S.students?.[id]?.name || '?';
+const TESTER = 'tester';                                       // 테스터 계정: 화면 확인용, 결과에 반영 안 됨
+const isTester = () => me.sid === TESTER;
+const stuName = id => id === TESTER ? '🧪 테스터' : (S.students?.[id]?.name || '?');
 const layout = () => S.seat?.layout || {rows: 4, cols: 4, cells: {}};
 const cellKey = (r, c) => 'c' + r + '_' + c;
 function seatCells(){                                         // 배치도 안의 자리 칸 [{key,r,c,z}]
@@ -509,7 +513,7 @@ const act = {
   propose(){
     const d = ui.draft;
     if (!d.name.trim()) return toast('역할 이름을 적어 주세요');
-    store.set('proposals/' + uid('p'), {name: d.name.trim(), desc: d.desc.trim(), reason: d.reason.trim(), time: d.time, slots: d.slots, by: me.sid, at: store.now()})
+    store.set('proposals/' + uid('p'), {name: d.name.trim(), desc: d.desc.trim(), reason: d.reason.trim(), time: d.time, slots: d.slots, by: me.sid, at: store.now(), test: isTester() || null})
       .then(() => toast('제안을 보냈어요! 📮'));
     ui.draft = emptyDraft();
     if (document.activeElement) document.activeElement.blur();
@@ -526,7 +530,7 @@ const act = {
   sendIdea(){
     const t = ui.idea.trim();
     if (!t) return toast('의견을 적어 주세요');
-    store.set('seat/ideas/' + uid('i'), {text: t, by: me.sid, at: store.now()}).then(() => toast('의견을 보냈어요! 📮'));
+    store.set('seat/ideas/' + uid('i'), {text: t, by: me.sid, at: store.now(), test: isTester() || null}).then(() => toast('의견을 보냈어요! 📮'));
     ui.idea = '';
     if (document.activeElement) document.activeElement.blur();
     render();
@@ -638,7 +642,8 @@ function gameBoard(rid, g, who){
       <button class="btn primary" onclick="act.reveal('${rid}')">✨ 결과 공개</button></div>` : ''}
   </section>`;
 }
-const likeCount = p => Object.keys(p.likes || {}).length;
+const likeCount = p => Object.keys(p.likes || {}).filter(k => k !== TESTER).length;
+const visiblePost = p => !p.test || isTester() || me.role === 'teacher';
 
 /* 역할 제안 */
 function proposalForm(){
@@ -653,13 +658,13 @@ function proposalForm(){
     <div class="center" style="margin-top:12px"><button class="btn big primary" onclick="act.propose()">📮 제안 보내기</button></div></section>`;
 }
 function proposalList(who){
-  const ps = Object.entries(S.proposals || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
+  const ps = Object.entries(S.proposals || {}).map(([id, p]) => ({id, ...p})).filter(visiblePost).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
   if (!ps.length) return `<section class="panel center"><h2>💬 친구들의 역할 제안</h2><p class="hint">아직 제안이 없어요.${who === 'teacher' ? ' 학생 태블릿에서 제안을 받아 보세요.' : ' 첫 번째로 제안해 볼까요?'}</p></section>`;
   return `<section class="panel"><h2>💬 친구들의 역할 제안 (${ps.length})</h2><div class="grid">${ps.map(p => {
     const path = 'proposals/' + p.id;
     const liked = p.likes?.[me.sid], mine = p.by === me.sid, adopted = p.adopted && S.roles?.[p.adopted];
     const btns = who === 'teacher'
-      ? `${adopted ? '<span class="tag">✅ 역할로 채택됨</span>' : `<button class="btn primary" onclick="act.adopt('${p.id}')">➕ 역할로 채택</button>`}<button class="btn" onclick="act.delPost('${path}')">🗑</button>`
+      ? `${p.test ? '<span class="tag">🧪 테스트 제안 (채택 불가)</span>' : adopted ? '<span class="tag">✅ 역할로 채택됨</span>' : `<button class="btn primary" onclick="act.adopt('${p.id}')">➕ 역할로 채택</button>`}<button class="btn" onclick="act.delPost('${path}')">🗑</button>`
       : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${path}')">👍 ${likeCount(p)}</button>${mine && !adopted ? `<button class="link" onclick="act.delPost('${path}')">지우기</button>` : ''}${adopted ? '<span class="tag">✅ 채택됨</span>' : ''}`;
     return `<div class="rcard prop ${adopted ? 'adopted' : ''}">
       <div class="rtop"><div><div class="rn">${esc(p.name)}</div><div class="tag">🕘 ${esc(p.time)} · 👥 ${p.slots}명</div></div>${who === 'teacher' ? `<div class="count">👍${likeCount(p)}</div>` : ''}</div>
@@ -677,12 +682,12 @@ function ideaForm(){
     <div class="center" style="margin-top:10px"><button class="btn big primary" onclick="act.sendIdea()">📮 의견 보내기</button></div></section>`;
 }
 function ideaList(who){
-  const ps = Object.entries(S.seat?.ideas || {}).map(([id, p]) => ({id, ...p})).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
+  const ps = Object.entries(S.seat?.ideas || {}).map(([id, p]) => ({id, ...p})).filter(visiblePost).sort((a, b) => likeCount(b) - likeCount(a) || (a.at || 0) - (b.at || 0));
   if (!ps.length) return `<section class="panel center"><h2>💬 친구들의 자리 배치 의견</h2><p class="hint">아직 의견이 없어요.</p></section>`;
   return `<section class="panel"><h2>💬 친구들의 자리 배치 의견 (${ps.length})</h2>${ps.map(p => {
     const path = 'seat/ideas/' + p.id, liked = p.likes?.[me.sid], mine = p.by === me.sid;
     const btns = who === 'teacher'
-      ? `<button class="btn ${p.adopted ? '' : 'primary'}" onclick="act.adoptIdea('${p.id}')">${p.adopted ? '채택 취소' : '📌 원칙으로 채택'}</button><button class="btn" onclick="act.delPost('${path}')">🗑</button>`
+      ? `${p.test ? '<span class="tag">🧪 테스트 의견 (채택 불가)</span>' : `<button class="btn ${p.adopted ? '' : 'primary'}" onclick="act.adoptIdea('${p.id}')">${p.adopted ? '채택 취소' : '📌 원칙으로 채택'}</button>`}<button class="btn" onclick="act.delPost('${path}')">🗑</button>`
       : `<button class="likebtn ${liked ? 'on' : ''}" onclick="act.like('${path}')">👍 ${likeCount(p)}</button>${mine && !p.adopted ? `<button class="link" onclick="act.delPost('${path}')">지우기</button>` : ''}`;
     return `<div class="idea ${p.adopted ? 'adopted' : ''}"><div class="itext">${p.adopted ? '📌 ' : ''}${esc(p.text)}<div class="by">${esc(stuName(p.by))}${who === 'teacher' ? ' · 👍 ' + likeCount(p) : ''}</div></div><div class="row">${btns}</div></div>`;
   }).join('')}</section>`;
@@ -713,7 +718,7 @@ function gridHtml(mode){
       continue;
     }
     if (apply){
-      const ap = Object.keys(picks).filter(s2 => picks[s2] === k && !own[k] && !(S.seat?.assigned || {})[s2]);
+      const ap = Object.keys(picks).filter(s2 => S.students?.[s2] && picks[s2] === k && !own[k] && !(S.seat?.assigned || {})[s2]);
       const who = teacher ? ap.map(x => esc(stuName(x))).join(' · ') : (myPick === k ? '✋ 나' : '');
       h += `<div class="cell drop ${myPick === k ? 'mine' : ''} ${ap.length > 1 ? 'crowd' : ''}" ${st} data-drop="${k}" ${!teacher ? `onclick="act.pick('${k}')"` : ''}>
         ${num}${ap.length ? `<span class="badge">${ap.length}</span>` : ''}<b>${who}</b></div>`;
@@ -868,7 +873,9 @@ function sPickName(){
   const st = students();
   if (!st.length) return `<div class="home"><div class="logo">⏳</div><h2>선생님이 준비하고 있어요</h2></div>`;
   return `<div class="center"><h1>🏗️ 교실 설계소</h1></div><section class="panel center"><h2>🙋 내 이름을 눌러 주세요</h2>
-    <div class="namegrid">${st.map(s => `<button class="btn" onclick="act.chooseMe('${s.id}')">${s.no}. ${esc(s.name)}</button>`).join('')}</div></section>`;
+    <div class="namegrid">${st.map(s => `<button class="btn" onclick="act.chooseMe('${s.id}')">${s.no}. ${esc(s.name)}</button>`).join('')}</div>
+    <div style="margin-top:18px"><button class="btn tester" onclick="act.chooseMe('${TESTER}')">🧪 테스터로 들어가기</button>
+    <p class="hint">테스터는 학생 화면을 미리 보는 계정이에요. 고른 것은 실제 결과에 반영되지 않아요.</p></div></section>`;
 }
 function sApplyRole(){
   const picks = D().picks || {}, un = unassigned(), myPick = picks[me.sid];
@@ -900,8 +907,9 @@ function sApplySeat(){
 }
 function studentView(){
   if (!loaded) return `<div class="home"><div class="logo">⏳</div><h2>연결하는 중…</h2></div>`;
-  if (!me.sid || !S.students?.[me.sid]) return sPickName();
-  const head = `<div class="me">👋 <b>${esc(stuName(me.sid))}</b> <button class="link" onclick="act.forgetMe()">내가 아니에요</button></div>`;
+  if (!me.sid || (!S.students?.[me.sid] && !isTester())) return sPickName();
+  const head = `<div class="me">👋 <b>${esc(stuName(me.sid))}</b> <button class="link" onclick="act.forgetMe()">${isTester() ? '테스터 나가기' : '내가 아니에요'}</button></div>`
+    + (isTester() ? `<div class="testbanner">🧪 테스터 모드 — 지원·제안·공감을 해 봐도 실제 결과에는 반영되지 않아요. 테스터 제안은 다른 학생에게 보이지 않아요.</div>` : '');
   if (!S.active) return head + `<div class="home"><div class="logo">🏗️</div><h2>교실 설계소</h2><p>선생님이 활동을 고르고 있어요. 잠시 기다려요!</p></div>`;
   const p = phase();
   const mr = itemOf(assigned()[me.sid]);
