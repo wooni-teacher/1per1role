@@ -124,13 +124,27 @@ label{display:block;font-size:.85rem;color:#8a8070;margin-top:8px;font-weight:70
 .itext{font-size:1.1rem;font-weight:700;flex:1;min-width:200px}
 .principles{background:#fffbe0}.principles ol{margin:6px 0;padding-left:22px;font-size:1.1rem;line-height:1.7}
 .chip:disabled{opacity:.4;cursor:not-allowed}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:10px}
+.tcard{border-radius:18px;overflow:hidden;background:#fff;border:3px solid var(--tc);box-shadow:0 4px 0 var(--tc)}
+.tcard.mine{outline:5px solid #ff8a3d;outline-offset:3px}
+.tcard .thd{background:var(--tc);color:var(--tt);padding:10px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:900;font-size:1.3rem}
+.tcard .thd small{font-size:.85rem;opacity:.9;white-space:nowrap}
+.tcard ul{list-style:none;margin:0;padding:10px;display:grid;gap:6px}
+.tcard .pn{display:flex;justify-content:space-between;align-items:center;width:100%;font:inherit;font-weight:800;font-size:1.15rem;min-height:44px;border:none;border-radius:10px;background:#f7f1e6;color:#2b2b3a;padding:8px 12px;text-align:left}
+.tcard button.pn{cursor:pointer}.tcard .pn.sel{outline:4px dashed #7b6cff}.tcard .pn.me{background:#ffe3c9}
+.tcard .pn small{color:#8a8070}
+.chip.absent{text-decoration:line-through;opacity:.45;border-style:dashed}
+.rate{display:flex;gap:4px}.rate button{width:42px;height:42px;border-radius:10px;border:2px solid #eadfcb;background:#fff;font:inherit;font-weight:800;cursor:pointer;color:#2b2b3a}
+.rate button.on{background:#ffc93d;border-color:#e0a800}
+.myteam{border-radius:24px;padding:22px;text-align:center;margin:14px 0;color:var(--tt);background:var(--tc);box-shadow:0 6px 0 rgba(0,0,0,.15)}
+.myteam .big{font-size:2.4rem;font-weight:900}.myteam p{font-size:1.15rem;font-weight:700;margin:6px 0 0}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
 /* =========================================================
-   교실 설계소 — 1인 1역 정하기 + 자리 배치 정하기
+   교실 설계소 — 1인 1역 정하기 + 자리 배치 정하기 + 체육 팀 나누기
    ========================================================= */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD-a2gTWcPZnrGeURBJi9aWa2_Jxgan8ek",
@@ -312,6 +326,7 @@ const act = {
     ui.mod = m; ui.sel = []; ui.swap = null;
     const up = {active: m};
     if (m === 'seat' && !S.seat?.layout) Object.assign(up, seatDefaultsMap());
+    if (m === 'pe' && !S.pe?.sports) Object.assign(up, peDefaultsMap());
     store.update(up); window.scrollTo(0, 0);
   },
   hub(){ ui.mod = null; render(); window.scrollTo(0, 0); },
@@ -478,7 +493,7 @@ const act = {
   },
   resetAll(){
     if (!confirm('역할·자리·명단·제안을 모두 지우고 처음 상태로 되돌릴까요?')) return;
-    store.update({roles: null, students: null, proposals: null, assigned: null, picks: null, games: null, round: null, endsAt: null, seat: null, active: null})
+    store.update({roles: null, students: null, proposals: null, assigned: null, picks: null, games: null, round: null, endsAt: null, seat: null, pe: null, active: null})
       .then(() => store.update(defaultsMap()));
     ui.mod = null;
   },
@@ -740,16 +755,206 @@ function warnBanner(){
   return `<div class="warnbanner">⚠️ 선생님 경고 ${w}번${w >= 2 ? ' — 다른 친구들이 모두 정해진 뒤 마지막에 고를 수 있어요' : ' — 한 번 더 받으면 마지막에 고르게 돼요'}</div>`;
 }
 
+/* ---------------- 체육 팀 나누기 (선생님이 나누고, 학생 태블릿에 공개) ---------------- */
+const PE_COLORS = [['빨강','#e5383b','#fff'],['파랑','#2f6fde','#fff'],['노랑','#f2c230','#2b2b3a'],['초록','#2a9d5c','#fff'],['주황','#f07b22','#fff'],['보라','#8a5cd6','#fff'],['분홍','#e8609a','#fff'],['하늘','#3fb6d9','#2b2b3a']];
+const PE_PAIR = ['#ffb4a2','#a0c4ff','#caffbf','#ffd6a5','#bdb2ff','#9bf6ff','#ffc6ff','#fdffb6'];
+const PE_DEFAULT_SPORTS = ['피구','킨볼','배드민턴','티볼'];
+const PE_DEFAULT_RULES = ["팀이 정해지면 '바꿔 주세요'는 하지 않아요.", "인원이 적은 팀이 먼저 공격(선공)해요.", "남는 친구는 심판 보조·기록원을 돌아가며 맡아요.", "이긴 팀보다 멋진 행동을 한 친구를 칭찬해요.", "경기가 끝나면 상대 팀과 하이파이브해요."];
+const nk = n => String(n).replace(/[.#$\[\]\/]/g, '_');
+const peArr = v => Array.isArray(v) ? v.filter(x => x != null) : Object.values(v || {});
+const PE = () => S.pe || {};
+const peCur = () => Object.assign({mode: 'team', k: 3, method: 'balance', odd: 'uneven'}, PE().cur || {});
+const peSports = () => Object.entries(PE().sports || {}).map(([id, s]) => ({id, ...s})).sort((a, b) => (a.order || 0) - (b.order || 0));
+const peSport = () => { const ss = peSports(); return ss.find(s => s.id === peCur().sport) || ss[0]; };
+const peRate = (n, sp = peSport()) => +(sp?.ratings?.[nk(n)]) || 3;
+const peNames = () => students().map(s => s.name);
+const pePresent = () => peNames().filter(n => !PE().absent?.[nk(n)]);
+const peRules = () => peArr(PE().rules).filter(r => String(r).trim());
+const peFixed = sp => { const f = PE().fixed?.[sp?.id]; return f ? {date: f.date, groups: peArr(f.groups).map(peArr)} : null; };
+const peDays = d => Math.floor((Date.now() - new Date(d + 'T00:00:00').getTime()) / 864e5);
+const peToday = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function peDefaultsMap(){
+  const up = {};
+  PE_DEFAULT_SPORTS.forEach((n, i) => up['pe/sports/p' + (i + 1)] = {name: n, order: i});
+  up['pe/cur'] = {sport: 'p1', mode: 'team', k: 3, method: 'balance', odd: 'uneven'};
+  up['pe/rules'] = PE_DEFAULT_RULES; up['pe/rotate'] = 28;
+  return up;
+}
+const peSort = (ns, sp) => shuffle(ns.slice()).sort((a, b) => peRate(b, sp) - peRate(a, sp));
+function peHelpers(ns, n){ const hc = PE().helperCount || {}; return shuffle(ns.slice()).sort((a, b) => (+hc[nk(a)] || 0) - (+hc[nk(b)] || 0)).slice(0, n); }
+function peTeams(ns, k, method, sp){
+  if (method === 'fixed'){                                     // 고정 팀: 결석은 빠지고 새 친구는 적은 팀으로
+    const g = peFixed(sp).groups.map(t => t.filter(n => ns.includes(n)));
+    ns.filter(n => !g.flat().includes(n)).forEach(n => g.reduce((m, t) => t.length < m.length ? t : m).push(n));
+    return g;
+  }
+  const g = Array.from({length: k}, () => []);
+  if (method === 'random'){ shuffle(ns.slice()).forEach((n, i) => g[i % k].push(n)); return g; }
+  peSort(ns, sp).forEach((n, i) => { const r = Math.floor(i / k), p = i % k; g[r % 2 ? k - 1 - p : p].push(n); });   // 지그재그
+  const sum = t => t.reduce((s, n) => s + peRate(n, sp), 0);
+  for (let it = 0; it < 60; it++){                              // 점수 차가 크면 한 명씩 맞바꿔 줄이기
+    const o = g.map((t, i) => i).sort((a, b) => sum(g[a]) - sum(g[b])), lo = g[o[0]], hi = g[o[o.length - 1]];
+    const gap = sum(hi) - sum(lo); if (gap <= 1) break; let best = null;
+    hi.forEach((a, i) => lo.forEach((b, j) => { const d = peRate(a, sp) - peRate(b, sp), ng = Math.abs(gap - 2 * d); if (d > 0 && ng < gap && (!best || ng < best[2])) best = [i, j, ng]; }));
+    if (!best) break; [hi[best[0]], lo[best[1]]] = [lo[best[1]], hi[best[0]]];
+  }
+  return g.map(t => shuffle(t));
+}
+function pePairs(ns, method, sp){
+  const key = p => p.slice().sort().join('|'), last = new Set(peArr(PE().lastPairs?.[sp.id]).map(p => key(peArr(p))));
+  let best = null;
+  for (let t = 0; t < (method === 'random' ? 60 : 20); t++){
+    const pairs = [];
+    if (method === 'random'){ const a = shuffle(ns.slice()); for (let i = 0; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); }
+    else { const a = peSort(ns, sp);
+      if (method === 'mix') for (let i = 0; i < Math.floor(a.length / 2); i++) pairs.push([a[i], a[a.length - 1 - i]]);
+      else for (let i = 0; i + 1 < a.length; i += 2) pairs.push([a[i], a[i + 1]]); }
+    const used = pairs.flat(), left = ns.filter(n => !used.includes(n)), rep = pairs.filter(p => last.has(key(p))).length;
+    if (!best || rep < best.rep) best = {pairs, left, rep}; if (!rep) break;
+  }
+  return best;
+}
+Object.assign(act, {
+  peTab(t){ ui.peTab = t; render(); },
+  peSet(f, v){ const up = {['pe/cur/' + f]: v}; if (f === 'sport' || f === 'mode'){ up['pe/result'] = null; if (f === 'mode') up['pe/cur/method'] = 'balance'; } store.update(up); },
+  peK(d){ const n = Math.max(2, pePresent().length); store.set('pe/cur/k', Math.max(2, Math.min(8, n, peCur().k + d))); },
+  peAbsent(el){ const k = nk(el.dataset.n); store.set('pe/absent/' + k, PE().absent?.[k] ? null : true); },
+  peAllHere(){ store.set('pe/absent', null); },
+  peRun(){
+    const cur = peCur(), sp = peSport(), ns = pePresent();
+    if (!sp) return toast('종목을 먼저 추가해 주세요');
+    if (ns.length < 2) return toast('출석한 친구가 2명 이상 있어야 해요');
+    let groups, helpers = [], note = '', pool = ns;
+    const up = {};
+    if (cur.mode === 'pair'){
+      if (ns.length % 2 && cur.odd === 'helper'){ helpers = peHelpers(ns, 1); pool = ns.filter(n => !helpers.includes(n)); }
+      const r = pePairs(pool, cur.method, sp); groups = r.pairs;
+      if (r.left.length){ groups[Math.floor(Math.random() * groups.length)].push(...r.left); note += '한 모둠은 3명이에요. '; }
+      if (r.rep) note += '지난번 짝과 최대한 겹치지 않게 바꿨어요. ';
+      up['pe/lastPairs/' + sp.id] = groups.filter(g => g.length === 2);
+    } else {
+      const k = Math.min(cur.k, ns.length), method = cur.method === 'fixed' && !peFixed(sp) ? 'balance' : cur.method;
+      if (method !== 'fixed' && ns.length % k && cur.odd === 'helper'){ helpers = peHelpers(ns, ns.length % k); pool = ns.filter(n => !helpers.includes(n)); }
+      groups = peTeams(pool, k, method, sp);
+      const sz = groups.map(g => g.length); if (Math.max(...sz) !== Math.min(...sz)) note += '인원이 적은 팀이 먼저 공격해요. ';
+      if (method === 'fixed'){ const f = peFixed(sp), d = peDays(f.date), left = (PE().rotate || 28) - d;
+        note += left > 0 ? `고정 팀 ${d + 1}일째 · ${left}일 뒤 새로 나누기를 권해요. ` : '고정 팀 교체 시기가 지났어요. 새로 나눠 보세요! '; }
+    }
+    helpers.forEach(n => up['pe/helperCount/' + nk(n)] = (+PE().helperCount?.[nk(n)] || 0) + 1);
+    up['pe/result'] = {sport: sp.id, sportName: sp.name, mode: cur.mode, groups, helpers, note, shown: false};
+    ui.peSel = null; store.update(up);
+  },
+  peTap(el){
+    const n = el.dataset.n, r = PE().result; if (!r) return;
+    if (!ui.peSel || ui.peSel === n){ ui.peSel = ui.peSel === n ? null : n; return render(); }
+    const lists = [...peArr(r.groups).map(peArr), peArr(r.helpers)], find = x => lists.find(l => l.includes(x));
+    const A = find(ui.peSel), B = find(n); A[A.indexOf(ui.peSel)] = n; B[B.indexOf(n)] = ui.peSel; ui.peSel = null;
+    store.update({'pe/result/groups': lists.slice(0, -1), 'pe/result/helpers': lists[lists.length - 1]});
+  },
+  peShow(v){ store.set('pe/result/shown', v || null); toast(v ? '학생 태블릿에 결과를 보여 줘요' : '학생 화면에서 결과를 숨겼어요'); },
+  peScore(){ ui.peScore = !ui.peScore; render(); },
+  peBig(){ ui.peBig = !ui.peBig; render(); window.scrollTo(0, 0); },
+  peFix(){ const r = PE().result; if (!r || r.mode !== 'team') return;
+    store.set('pe/fixed/' + r.sport, {groups: peArr(r.groups).map(peArr), date: peToday()}).then(() => toast(r.sportName + ' 고정 팀을 저장했어요')); },
+  peUnfix(id){ if (confirm('고정 팀을 지울까요?')) store.set('pe/fixed/' + id, null); },
+  peRSport(id){ ui.peR = id; render(); },
+  peRate(el){ store.set('pe/sports/' + ui.peR + '/ratings/' + nk(el.dataset.n), +el.dataset.v); },
+  peAddSport(){ const el = document.getElementById('peNew'), n = el.value.trim(); if (!n) return; el.value = '';
+    const id = uid('p'); store.set('pe/sports/' + id, {name: n, order: Math.max(0, ...peSports().map(s => s.order || 0)) + 1}); ui.peR = id; },
+  peDelSport(id){ const sp = peSports().find(s => s.id === id); if (!sp || peSports().length < 2) return;
+    if (!confirm('‘' + sp.name + '’ 종목과 실력 기록을 지울까요?')) return;
+    const up = {['pe/sports/' + id]: null, ['pe/fixed/' + id]: null}; if (peCur().sport === id) up['pe/cur/sport'] = peSports().find(s => s.id !== id).id; store.update(up); ui.peR = null; },
+  peRule(i, v){ const rs = peArr(PE().rules); rs[i] = v; store.set('pe/rules', rs); },
+  peDelRule(i){ const rs = peArr(PE().rules); rs.splice(i, 1); store.set('pe/rules', rs); },
+  peAddRule(){ store.set('pe/rules', [...peArr(PE().rules), '새 약속']); },
+  peRotate(d){ store.set('pe/rotate', d); }
+});
+function peTeamsHtml(r, who){
+  if (!r) return '';
+  const sp = peSports().find(s => s.id === r.sport), score = who === 'teacher' && ui.peScore;
+  const card = (g, i, title, col, tt, helper) => {
+    const mine = who === 'student' && g.includes(stuName(me.sid));
+    return `<div class="tcard ${mine ? 'mine' : ''}" style="--tc:${col};--tt:${tt}"><div class="thd"><span>${esc(title)}</span><small>${g.length}명${score && !helper ? ' · ' + g.reduce((s, n) => s + peRate(n, sp), 0) + '점' : ''}</small></div>
+      <ul>${g.map(n => who === 'teacher'
+        ? `<li><button class="pn ${ui.peSel === n ? 'sel' : ''}" data-n="${esc(n)}" onclick="act.peTap(this)"><span>${esc(n)}</span>${score ? `<small>${peRate(n, sp)}</small>` : ''}</button></li>`
+        : `<li><span class="pn ${n === stuName(me.sid) ? 'me' : ''}">${esc(n)}</span></li>`).join('')}</ul></div>`;
+  };
+  const gs = peArr(r.groups).map(peArr), hs = peArr(r.helpers);
+  return `<div class="tgrid">${gs.map((g, i) => r.mode === 'pair' ? card(g, i, '짝 ' + (i + 1), PE_PAIR[i % 8], '#2b2b3a') : card(g, i, PE_COLORS[i % 8][0] + '팀', PE_COLORS[i % 8][1], PE_COLORS[i % 8][2])).join('')}
+    ${hs.length ? card(hs, -1, '🧑‍⚖️ 심판 보조', '#6b6f80', '#fff', true) : ''}</div>`;
+}
+const pePromise = () => peRules().length ? `<section class="panel principles"><h3>🤝 우리의 약속</h3><ol>${peRules().map(r => `<li>${esc(r)}</li>`).join('')}</ol></section>` : '';
+function tPE(){
+  const cur = peCur(), sp = peSport(), r = PE().result, tab = ui.peTab || 'make';
+  if (ui.peBig) return `<div class="row center noprint"><button class="btn" onclick="act.peBig()">⚙️ 설정으로 돌아가기</button></div>
+    <div class="center"><h1>🏃 ${esc(r?.sportName || '')} ${r?.mode === 'pair' ? '짝' : '팀'}</h1></div>${r ? peTeamsHtml(r, 'big') : '<p class="center hint">아직 나눈 팀이 없어요.</p>'}${pePromise()}`;
+  const head = `<div class="thead noprint"><button class="btn" onclick="act.hub()">🏗️ 설계소 홈</button><b>🏃 체육 팀 나누기</b>
+    <div class="chips">${[['make', '팀 나누기'], ['rate', '종목별 실력'], ['rules', '우리의 약속']].map(([t, l]) => `<button class="chip ${tab === t ? 'on' : ''}" onclick="act.peTab('${t}')">${l}</button>`).join('')}</div></div>${modeBanner()}`;
+  if (tab === 'rate'){
+    const ss = peSports(); if (!ss.some(s => s.id === ui.peR)) ui.peR = sp?.id;
+    const rs = ss.find(s => s.id === ui.peR);
+    return head + `<section class="panel"><h2>⭐ 종목별 실력 (선생님만 보기)</h2>
+      <p class="hint">1 = 연습이 더 필요해요, 5 = 아주 잘해요. 학생 화면에는 점수가 나오지 않아요. 명단은 설계소 홈에서 고쳐요.</p>
+      <div class="chips">${ss.map(s => `<button class="chip ${s.id === ui.peR ? 'on' : ''}" onclick="act.peRSport('${s.id}')">${esc(s.name)}</button>`).join('')}</div>
+      ${rs ? peNames().map(n => `<div class="rrow"><b style="min-width:90px">${esc(n)}</b><div class="rate">${[1, 2, 3, 4, 5].map(v => `<button class="${peRate(n, rs) === v ? 'on' : ''}" data-n="${esc(n)}" data-v="${v}" onclick="act.peRate(this)">${v}</button>`).join('')}</div></div>`).join('') : ''}
+      <div class="row" style="margin-top:14px"><input id="peNew" class="inp" style="max-width:260px" placeholder="새 종목 (예: 플라잉디스크)"><button class="btn" onclick="act.peAddSport()">＋ 종목 추가</button>
+        ${rs && ss.length > 1 ? `<button class="btn" onclick="act.peDelSport('${rs.id}')">🗑 ${esc(rs.name)} 지우기</button>` : ''}</div></section>`;
+  }
+  if (tab === 'rules') return head + `<section class="panel"><h2>🤝 우리의 약속 (운영 규칙)</h2><p class="hint">결과 화면과 학생 태블릿에 함께 보여요.</p>
+      ${peArr(PE().rules).map((t, i) => `<div class="row"><input class="inp" style="flex:1" value="${esc(t)}" onchange="act.peRule(${i},this.value)"><button class="x" onclick="act.peDelRule(${i})">✕</button></div>`).join('')}
+      <button class="btn" onclick="act.peAddRule()">＋ 약속 추가</button>
+      <h3 style="margin-top:20px">🔁 고정 팀 교체 주기</h3><div class="chips">${[[7, '1주'], [14, '2주'], [28, '4주'], [56, '8주']].map(([d, l]) => `<button class="chip ${(PE().rotate || 28) === d ? 'on' : ''}" onclick="act.peRotate(${d})">${l}</button>`).join('')}</div>
+      <p class="hint">고정 팀을 쓰다가 이 기간이 지나면 새로 나누자고 알려 줘요.</p></section>`;
+  const n = pePresent().length, fx = peFixed(sp), pair = cur.mode === 'pair';
+  const M = pair ? [['balance', '비슷한 실력끼리', '배드민턴 랠리처럼 실력이 비슷해야 재미있는 활동에 좋아요.'], ['mix', '잘하는 친구 + 배우는 친구', '서로 가르쳐 주는 짝 연습에 좋아요.'], ['random', '무작위', '지난번 짝과 최대한 겹치지 않게 뽑아요.']]
+    : [['balance', '⚖️ 실력 균형', '종목별 실력을 지그재그로 나눠 팀 점수를 비슷하게 맞춰요. 점수는 학생에게 보이지 않아요.'], ['random', '🎲 무작위', '운에 맡겨요. 불만은 적지만 실력 차가 날 수 있어요.'], ['fixed', '📌 고정 팀', '저장해 둔 팀을 그대로 써요. 결석한 친구는 빠지고, 새 친구는 인원이 적은 팀으로 가요.']];
+  const method = M.some(m => m[0] === cur.method) && !(cur.method === 'fixed' && !fx) ? cur.method : 'balance';
+  const O = pair ? [['uneven', '3명 모둠 하나'], ['helper', '1명은 심판 보조']] : [['uneven', '팀 인원 다르게 (적은 팀 선공)'], ['helper', '남는 친구는 심판 보조']];
+  return head + `<section class="panel noprint">
+    <label>종목</label><div class="chips">${peSports().map(s => `<button class="chip ${s.id === sp?.id ? 'on' : ''}" onclick="act.peSet('sport','${s.id}')">${esc(s.name)}</button>`).join('')}</div>
+    <label>활동 방식</label><div class="chips"><button class="chip ${!pair ? 'on' : ''}" onclick="act.peSet('mode','team')">👥 팀 활동</button><button class="chip ${pair ? 'on' : ''}" onclick="act.peSet('mode','pair')">🤝 짝 활동</button></div>
+    ${pair ? '' : `<label>팀 수</label><div class="row"><div class="stepper"><button onclick="act.peK(-1)">−</button><b style="font-size:1.6rem">${cur.k}팀</b><button onclick="act.peK(1)">＋</button></div><span class="hint">팀당 ${Math.floor(n / cur.k)}~${Math.ceil(n / cur.k)}명</span></div>`}
+    <label>나누는 방법</label><div class="chips">${M.map(m => `<button class="chip ${method === m[0] ? 'on' : ''}" ${m[0] === 'fixed' && !fx ? 'disabled' : ''} onclick="act.peSet('method','${m[0]}')">${m[1]}</button>`).join('')}</div>
+    <p class="hint">${(M.find(m => m[0] === method) || M[0])[2]}${!pair && !fx ? ' (결과에서 ‘이 팀 고정하기’를 누르면 고정 팀이 생겨요.)' : ''}</p>
+    ${fx && !pair ? `<p class="hint">📌 ${esc(sp.name)} 고정 팀: ${esc(fx.date)}부터 ${peDays(fx.date) + 1}일째 <button class="link" onclick="act.peUnfix('${sp.id}')">고정 지우기</button></p>` : ''}
+    <label>인원이 딱 맞지 않을 때</label><div class="chips">${O.map(o => `<button class="chip ${cur.odd === o[0] ? 'on' : ''}" onclick="act.peSet('odd','${o[0]}')">${o[1]}</button>`).join('')}</div>
+    <label>오늘 출석 ${n}명 / ${peNames().length}명 <button class="link" onclick="act.peAllHere()">모두 출석</button></label>
+    <div class="chips">${peNames().map(nm => `<button class="chip ${PE().absent?.[nk(nm)] ? 'absent' : ''}" data-n="${esc(nm)}" onclick="act.peAbsent(this)">${esc(nm)}</button>`).join('')}</div>
+    <p class="hint">결석한 친구를 누르면 빠져요.</p>
+    <div class="center"><button class="btn big primary" onclick="act.peRun()">${pair ? '🤝 짝 정하기!' : '🏃 팀 나누기!'}</button></div></section>
+  ${r ? `<section class="panel"><div class="row between"><h2>${esc(r.sportName)} ${r.mode === 'pair' ? '짝' : '팀'} 결과</h2>
+      <div class="row noprint"><button class="btn" onclick="act.peScore()">${ui.peScore ? '🙈 점수 숨기기' : '🔒 실력 점수 보기'}</button>
+        ${r.mode === 'team' ? '<button class="btn" onclick="act.peFix()">📌 이 팀 고정하기</button>' : ''}
+        <button class="btn" onclick="act.peBig()">📺 크게 보기</button>
+        <button class="btn ${r.shown ? '' : 'primary'}" onclick="act.peShow(${!r.shown})">${r.shown ? '🙈 학생 화면에서 숨기기' : '📲 학생 태블릿에 공개'}</button></div></div>
+    <p class="hint">${esc(r.note || '')}이름 두 개를 차례로 누르면 서로 바꿀 수 있어요.${S.active === 'pe' ? '' : ' (학생 태블릿에 보이려면 홈에서 이 활동을 열어 두세요.)'}</p>
+    ${peTeamsHtml(r, 'teacher')}</section>` : `<section class="panel center"><h2>준비 완료!</h2><p class="hint">종목과 방식을 고르고 버튼을 눌러 주세요.</p></section>`}
+  ${pePromise()}`;
+}
+function peStudent(){
+  const r = PE().result;
+  if (!r || !r.shown) return `<div class="home"><div class="logo">🏃</div><h2>선생님이 팀을 나누고 있어요</h2><p>두근두근! 잠시만 기다려요.</p></div>${pePromise()}`;
+  const gs = peArr(r.groups).map(peArr), my = stuName(me.sid), i = gs.findIndex(g => g.includes(my));
+  let box = '';
+  if (peArr(r.helpers).includes(my)) box = `<div class="myteam" style="--tc:#6b6f80;--tt:#fff"><div class="big">🧑‍⚖️ 심판 보조</div><p>오늘은 심판 보조·기록원을 맡아 줘요!</p></div>`;
+  else if (i >= 0) box = r.mode === 'pair'
+    ? `<div class="myteam" style="--tc:${PE_PAIR[i % 8]};--tt:#2b2b3a"><div class="big">🤝 짝 ${i + 1}</div><p>${gs[i].filter(n => n !== my).map(esc).join(', ')}와(과) 함께해요!</p></div>`
+    : `<div class="myteam" style="--tc:${PE_COLORS[i % 8][1]};--tt:${PE_COLORS[i % 8][2]}"><div class="big">나는 ${PE_COLORS[i % 8][0]}팀!</div><p>${esc(r.sportName)} · 우리 팀 ${gs[i].length}명</p></div>`;
+  return `<div class="center"><h2>🏃 ${esc(r.sportName)} ${r.mode === 'pair' ? '짝' : '팀'}</h2></div>${box}${peTeamsHtml(r, 'student')}${pePromise()}`;
+}
+
 /* ---------------- 선생님 화면 ---------------- */
 function tHub(){
   const st = students(), n = st.length;
   const label = (m, p) => ({setup: '토의 중', apply: '지원 중', game: '미니게임 중', closed: '다음 지원 준비', done: '완료 ✅'}[p || 'setup']);
   const card = (m, em, title, desc, p) => `<button class="modcard" onclick="act.openMod('${m}')"><div class="em">${em}</div><h2>${title}</h2><p>${desc}</p>
     <span class="tag">${label(m, p)}${S.active === m ? ' · 학생 화면에 열림' : ''}</span></button>`;
-  return `<div class="center"><div class="logo">🏗️</div><h1>교실 설계소</h1><p class="hint">우리 반의 역할과 자리를 함께 설계해요</p></div>
+  return `<div class="center"><div class="logo">🏗️</div><h1>교실 설계소</h1><p class="hint">우리 반의 역할·자리·체육 팀을 함께 설계해요</p></div>
   ${modeBanner()}
   <div class="modgrid">${card('role', '🙋', '1인 1역 정하기', '필요한 역할을 제안하고, 지원하고, 함께 정해요', S.phase)}
-    ${card('seat', '🪑', '자리 배치 정하기', '자리 원칙을 토의하고, 원하는 구역에 지원해요', S.seat?.phase)}</div>
+    ${card('seat', '🪑', '자리 배치 정하기', '자리 원칙을 토의하고, 원하는 구역에 지원해요', S.seat?.phase)}
+    <button class="modcard" onclick="act.openMod('pe')"><div class="em">🏃</div><h2>체육 팀 나누기</h2><p>종목별 실력으로 공정하게 팀·짝을 나누고 태블릿에 보여 줘요</p>
+      <span class="tag">${PE().result?.shown ? '결과 공개 중' : PE().result ? '팀 나눔 완료' : '준비'}${S.active === 'pe' ? ' · 학생 화면에 열림' : ''}</span></button></div>
   <section class="panel"><h2>👧 우리 반 명단 (${n}명)</h2>
     <p class="hint">한 줄에 한 명씩, 번호 순서대로 적고 저장해요. 두 활동이 같은 명단을 써요.</p>
     <textarea id="names" rows="6">${esc(st.map(s => s.name).join('\n'))}</textarea>
@@ -859,6 +1064,7 @@ function tDone(){
 function teacherView(){
   if (loaded && !S.students && !initDone){ initDone = true; store.update(defaultsMap()); }
   if (!ui.mod) return tHub();
+  if (ui.mod === 'pe') return tPE();
   const p = phase();
   const body = isSeat()
     ? ({setup: tSeatSetup, apply: tApply, game: tGame, closed: tClosed, done: tDone}[p] || tSeatSetup)
@@ -911,6 +1117,7 @@ function studentView(){
   const head = `<div class="me">👋 <b>${esc(stuName(me.sid))}</b> <button class="link" onclick="act.forgetMe()">${isTester() ? '테스터 나가기' : '내가 아니에요'}</button></div>`
     + (isTester() ? `<div class="testbanner">🧪 테스터 모드 — 지원·제안·공감을 해 봐도 실제 결과에는 반영되지 않아요. 테스터 제안은 다른 학생에게 보이지 않아요.</div>` : '');
   if (!S.active) return head + `<div class="home"><div class="logo">🏗️</div><h2>교실 설계소</h2><p>선생님이 활동을 고르고 있어요. 잠시 기다려요!</p></div>`;
+  if (S.active === 'pe') return head + peStudent();
   const p = phase();
   const mr = itemOf(assigned()[me.sid]);
   const title = `<div class="center"><h2>${isSeat() ? '🪑 자리 배치 정하기' : '🙋 1인 1역 정하기'}</h2></div>`;
@@ -949,7 +1156,7 @@ function studentView(){
 
 /* ---------------- 그리기 ---------------- */
 function home(){
-  return `<div class="home"><div class="logo">🏗️</div><h1>교실 설계소</h1><p>우리 반의 역할과 자리를 함께 설계해요!</p>
+  return `<div class="home"><div class="logo">🏗️</div><h1>교실 설계소</h1><p>우리 반의 역할·자리·체육 팀을 함께 설계해요!</p>
     <button class="btn big primary" onclick="act.asStudent()">🧒 학생으로 들어가기</button>
     <button class="btn big" onclick="act.asTeacher()">🧑‍🏫 선생님</button>${modeBanner()}</div>`;
 }
@@ -967,6 +1174,7 @@ document.addEventListener('focusout', () => { if (pending){ pending = false; set
 let lastExpired = null;
 function tick(){
   if (me.role === 'teacher' && !ui.mod) return;
+  if (MOD === 'pe') return;
   if (phase() !== 'apply') return;
   const left = Math.max(0, (D().endsAt || 0) - store.now());
   const total = (D().duration || dur()) * 1000;
